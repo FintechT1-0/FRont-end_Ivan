@@ -6,7 +6,10 @@ COPY package.json package-lock.json ./
 RUN npm install
 
 COPY . .
+
+RUN echo "Files in /app before build:" && ls -la /app
 RUN npm run build
+RUN echo "Files in /app after build:" && ls -la /app
 
 FROM nginx:alpine
 
