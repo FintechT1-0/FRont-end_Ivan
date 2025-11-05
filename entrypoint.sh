@@ -12,4 +12,5 @@ if [ ! -f /etc/letsencrypt/live/fintecheducation.online/fullchain.pem ]; then
   echo "Certificate obtained!"
 fi
 
+
 nginx -g "daemon off;"
