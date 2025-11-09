@@ -239,4 +239,6 @@ function RegistrationForm({ onSuccess }) {
   );
 }
 
-export default RegistrationForm;
+export default RegistrationForm; 
+
+// Usage example:
