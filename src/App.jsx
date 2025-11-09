@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginForm from "./components/LoginForm";
-import RegistrationForm from "./components/RegistrationForm"; // твоя реєстрація
+import RegistrationForm from "./components/RegistrationForm";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -12,7 +12,6 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegistrationForm />} />
-
         <Route
           path="/dashboard"
           element={
@@ -21,7 +20,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
         <Route path="*" element={<div className="p-6">404</div>} />
       </Routes>
     </BrowserRouter>

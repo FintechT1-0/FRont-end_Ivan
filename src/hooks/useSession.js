@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { me } from "../services/auth";
+import { me } from "../service/auth";  // ← правильний шлях
 
 export default function useSession() {
   const [user, setUser] = useState(null);
@@ -7,18 +7,13 @@ export default function useSession() {
 
   useEffect(() => {
     const token = localStorage.getItem("jwt");
-    if (!token) {
-      setChecking(false);
-      return;
-    }
+    if (!token) { setChecking(false); return; }
+
     me()
       .then((u) => {
-        // бек може віддати {user: {...}} або сам об'єкт — підлаштовуємо:
         const resolved = u?.user ?? u ?? null;
         setUser(resolved);
-        if (resolved) {
-          localStorage.setItem("finu_user", JSON.stringify(resolved));
-        }
+        if (resolved) localStorage.setItem("finu_user", JSON.stringify(resolved));
       })
       .catch(() => {
         localStorage.removeItem("jwt");

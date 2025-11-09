@@ -1,15 +1,12 @@
 import React from "react";
 
 export default function Dashboard() {
-  const userRaw = localStorage.getItem("finu_user");
-  const user = userRaw ? JSON.parse(userRaw) : null;
-
-  function logout() {
+  const user = JSON.parse(localStorage.getItem("finu_user") || "null");
+  const logout = () => {
     localStorage.removeItem("jwt");
     localStorage.removeItem("finu_user");
     window.location.assign("/login");
-  }
-
+  };
   return (
     <div className="min-h-screen p-6 bg-slate-50">
       <div className="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow">

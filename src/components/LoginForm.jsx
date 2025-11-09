@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../services/auth";
+import { login } from "../service/auth";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
@@ -21,10 +21,7 @@ export default function LoginForm() {
   }, [email, password]);
 
   const isValid = Object.keys(errors).length === 0;
-
-  function markTouched(field) {
-    setTouched((t) => ({ ...t, [field]: true }));
-  }
+  const markTouched = (f) => setTouched((t) => ({ ...t, [f]: true }));
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,24 +32,12 @@ export default function LoginForm() {
     try {
       setSubmitting(true);
       const data = await login(email.trim(), password);
-
-      // очікуємо поле token
-      if (data?.token) {
-        localStorage.setItem("jwt", data.token);
-      }
-      // збережемо користувача (якщо є)
-      const user = data?.user ?? null;
-      if (user) localStorage.setItem("finu_user", JSON.stringify(user));
-
-      // редірект на Dashboard
+      if (data?.token) localStorage.setItem("jwt", data.token);
+      if (data?.user) localStorage.setItem("finu_user", JSON.stringify(data.user));
       nav("/dashboard", { replace: true });
     } catch (err) {
       const status = err?.response?.status;
-      if (status === 401) {
-        setErrorMsg("Невірний email або пароль");
-      } else {
-        setErrorMsg("Сталася помилка. Спробуйте ще раз.");
-      }
+      setErrorMsg(status === 401 ? "Невірний email або пароль" : "Сталася помилка. Спробуйте ще раз.");
     } finally {
       setSubmitting(false);
     }
