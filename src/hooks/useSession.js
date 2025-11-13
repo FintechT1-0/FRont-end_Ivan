@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { me } from "../service/auth";  // ← правильний шлях
+import { me } from "../service/auth";
 
 export default function useSession() {
   const [user, setUser] = useState(null);
@@ -11,9 +11,8 @@ export default function useSession() {
 
     me()
       .then((u) => {
-        const resolved = u?.user ?? u ?? null;
-        setUser(resolved);
-        if (resolved) localStorage.setItem("finu_user", JSON.stringify(resolved));
+        setUser(u);
+        if (u) localStorage.setItem("finu_user", JSON.stringify(u));
       })
       .catch(() => {
         localStorage.removeItem("jwt");

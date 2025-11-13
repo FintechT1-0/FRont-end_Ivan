@@ -137,11 +137,10 @@ export default function LoginForm() {
 
             {/* Лінк на реєстрацію */}
             <p className="mt-4 text-center text-sm text-slate-600">
-              Немає акаунта?{" "}
-              <a href="/register" className="text-indigo-600 hover:underline">
-                Зареєструватись
-              </a>
-            </p>
+  Немає акаунта?{" "}
+  <a href="/register" className="text-indigo-600 hover:underline">Зареєструватись</a>
+</p>
+
           </form>
         </div>
       </div>
