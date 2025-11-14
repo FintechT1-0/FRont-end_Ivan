@@ -1,15 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { login, me } from "../service/auth";
 import { cleanEmail } from "../utils/clean";
 import { setToken } from "../utils/token";
 import { useToast } from "../context/ToastContext";
 
 const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const DEFAULT_AFTER_LOGIN = "/cabinet";
 
 export default function LoginForm() {
   const nav = useNavigate();
+  const location = useLocation();
   const { show } = useToast();
+
+  const redirectFromState = location.state?.from?.pathname || null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,16 +43,19 @@ export default function LoginForm() {
       setSubmitting(true);
       const { token } = await login(cleanEmail(email), password);
       if (!token) throw new Error("No token");
-      setToken(token, 24 * 60 * 60); // 24h
-      // підтверджуємо сесію і кешуємо користувача
+      setToken(token, 24 * 60 * 60);
       const user = await me();
       if (user) localStorage.setItem("finu_user", JSON.stringify(user));
       show("Успішний вхід", "success");
-      nav("/cabinet", { replace: true });
+      const target = redirectFromState || DEFAULT_AFTER_LOGIN;
+      nav(target, { replace: true });
     } catch (err) {
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message;
-      setErrorMsg(status === 401 ? (serverMsg || "Invalid credentials") : "Сталася помилка. Спробуйте ще раз.");
+      setErrorMsg(
+        status === 401 ? (serverMsg || "Invalid credentials")
+                       : "Сталася помилка. Спробуйте ще раз."
+      );
       show(status === 401 ? "Невірний email або пароль" : "Помилка входу", "error");
     } finally {
       setSubmitting(false);

@@ -10,9 +10,7 @@ export function ToastProvider({ children }) {
   const show = useCallback((message, t = "info", ms = 2500) => {
     setType(t);
     setMsg(message);
-    if (ms) {
-      setTimeout(() => setMsg(null), ms);
-    }
+    if (ms) setTimeout(() => setMsg(null), ms);
   }, []);
 
   return (

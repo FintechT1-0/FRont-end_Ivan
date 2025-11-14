@@ -17,9 +17,7 @@ export default function useSession() {
         setUser(u);
         if (u) localStorage.setItem("finu_user", JSON.stringify(u));
       })
-      .catch(() => {
-        clearToken();
-      })
+      .catch(() => clearToken())
       .finally(() => setChecking(false));
   }, []);
 

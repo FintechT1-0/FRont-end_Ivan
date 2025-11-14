@@ -53,12 +53,14 @@ export default function RegistrationForm() {
       const payload = {
         firstName: firstName.trim(),
         lastName:  lastName.trim(),
+        first_name: firstName.trim(), // на випадок snake_case
+        last_name:  lastName.trim(),
         email:     cleanEmail(email),
         password
       };
       await apiRegister(payload);
       show("Реєстрація успішна. Увійдіть у систему.", "success");
-      nav("/login", { replace: true }); // Sprint 2: редірект на логін
+      nav("/login", { replace: true });
     } catch (err) {
       const status = err?.response?.status;
       const d = err?.response?.data;
@@ -67,7 +69,6 @@ export default function RegistrationForm() {
         : d?.message || "Не вдалося зареєструватись.";
       if (status === 409) msg = "Email already in use";
       if (status === 400 && Array.isArray(d?.errors) && d.errors.length) {
-        // Беремо першу field error як коротке пояснення
         msg = d.errors[0]?.message || msg;
       }
       setErrorMsg(msg);
