@@ -1,53 +1,28 @@
 // src/api/client.js
 import axios from "axios";
-import { getToken, clearToken, isExpired } from "../utils/token";
+import { getToken, clearToken } from "../utils/token";
 
-const baseURL = import.meta.env.VITE_API_BASE || '/';
-console.log("VITE_API_BASE =", baseURL);
+// У деві базовий шлях = '/' (проксі), у проді — домен
+const baseURL = import.meta.env.DEV ? "/" : "https://fintechbackend.online";
+console.log("API baseURL =", baseURL);
 
-const api = axios.create({ baseURL });
+const api = axios.create({
+  baseURL,
+  headers: { "Content-Type": "application/json" },
+});
 
 api.interceptors.request.use((config) => {
   const t = getToken();
-
-  // якщо токен є, але прострочений — чистимо й не додаємо його
-  if (t && isExpired()) {
-    clearToken();
-  } else if (t) {
-    // валідний токен — додаємо в заголовок
-    config.headers.Authorization = `Bearer ${t}`;
-  }
-
-  try {
-    console.log(
-      "API →",
-      (config.method || "GET").toUpperCase(),
-      (config.baseURL || "") + (config.url || "")
-    );
-  } catch (_) {}
-
+  if (t) config.headers.Authorization = `Bearer ${t}`;
   return config;
 });
 
 api.interceptors.response.use(
-  (res) => res,
+  (r) => r,
   (err) => {
-    const status = err?.response?.status;
-    try {
-      console.log(
-        "API ⨯",
-        err?.config?.url,
-        status,
-        err?.response?.data || err.message
-      );
-    } catch (_) {}
-
-    if (status === 401) {
+    const s = err?.response?.status;
+    if (s === 401) {
       clearToken();
-      if (typeof window !== "undefined") window.location.assign("/login");
-    }
-    if (status === 403) {
-      if (typeof window !== "undefined") window.location.assign("/login");
     }
     return Promise.reject(err);
   }

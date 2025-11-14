@@ -1,9 +1,8 @@
 // src/components/RegistrationForm.jsx
 import React, { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { register as apiRegister } from "../service/auth";
+import { register as apiRegister, checkEmail } from "../service/auth";
 
-// простий regex для MVP
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
 export default function RegistrationForm() {
@@ -54,12 +53,23 @@ export default function RegistrationForm() {
     try {
       setSubmitting(true);
 
-      // важливо: бек приймає JSON; дублюємо snake_case
+      // 1) Опціонально: перевірка, чи email вже існує (POST /auth/checkEmail)
+      try {
+        const chk = await checkEmail(String(email).trim().toLowerCase());
+        if (chk?.exists === true) {
+          setErrorMsg("Email already in use");
+          setSubmitting(false);
+          return;
+        }
+      } catch (e) {
+        // Якщо бек не піднятий для цього — просто ігноруємо та пробуємо реєстрацію
+        console.log("CHECK_EMAIL_WARN:", e?.response?.data || e.message);
+      }
+
+      // 2) Реєстрація — бек очікує name/surname
       const payload = {
-        firstName: firstName.trim(),
-        lastName:  lastName.trim(),
-        first_name: firstName.trim(),
-        last_name:  lastName.trim(),
+        name: firstName.trim(),
+        surname: lastName.trim(),
         email: String(email).trim().toLowerCase(),
         password
       };
@@ -68,21 +78,19 @@ export default function RegistrationForm() {
       console.log("REGISTER_OK:", data);
 
       setSuccessMsg("Реєстрація успішна. Увійдіть у систему.");
-      // вимога: після register → /login
       setTimeout(() => navigate("/login", { replace: true }), 600);
     } catch (err) {
-      // логування на вимогу
       console.log("REGISTER_ERR_CATCH:", err?.response?.data || err.message);
-
       const status = err?.response?.status;
       const d = err?.response?.data;
+
       let msg =
         (typeof d === "string" && d) ||
-        d?.message ||
-        d?.detail ||
+        d?.message || d?.detail ||
         "Не вдалося зареєструватись.";
 
       if (status === 409) msg = "Email already in use";
+      if (status === 405) msg = "Метод не дозволено (перевір URL/метод/Content-Type)";
       if (status === 400 && Array.isArray(d?.errors) && d.errors.length) {
         msg = d.errors[0]?.message || msg;
       }
@@ -107,7 +115,6 @@ export default function RegistrationForm() {
               {successMsg}
             </div>
           )}
-
           {errorMsg && (
             <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800" role="alert">
               {errorMsg}
