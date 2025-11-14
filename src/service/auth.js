@@ -1,70 +1,85 @@
 // src/service/auth.js
 import api from "../api/client";
+import { setToken, clearToken } from "../utils/token";
 
 /**
- * Логін користувача.
- * ВАЖЛИВО: відправляємо РІВНО { email, password }.
- * Повертаємо нормалізований об'єкт { token, user }.
- */
-export async function login(email, password) {
-  try {
-    const { data } = await api.post("/auth/login", { email, password });
-
-    // нормалізація на випадок різних назв полів на бекенді
-    const token =
-      data?.token ||
-      data?.access_token ||
-      data?.jwt ||
-      data?.data?.token ||
-      null;
-
-    const user =
-      data?.user ||
-      data?.data?.user ||
-      null;
-
-    return { token, user };
-  } catch (error) {
-    // логування помилки (прохання Марини)
-    console.log("LOGIN_ERROR:", error?.response?.data || error.message);
-    throw error;
-  }
-}
-
-/**
- * Реєстрація користувача.
- * Бек зазвичай очікує snake_case; дублюємо first_name/last_name.
+ * POST /auth/register
+ * @param {{ email: string, password: string }} payload
+ * @returns {Promise<any>} server data
  */
 export async function register(payload) {
   try {
-    const body = {
-      email: payload.email,
-      password: payload.password,
-      first_name: payload.first_name ?? payload.firstName,
-      last_name:  payload.last_name  ?? payload.lastName,
-    };
-
-    const { data } = await api.post("/auth/register", body);
+    const { data } = await api.post("/auth/register", payload);
+    // Реєстрація в MVP: після успіху токен не обов’язковий — редіректимо на /login у компоненті
     return data;
   } catch (error) {
+    // Обов’язкове логування для дебагу
     console.log("REGISTER_ERROR:", error?.response?.data || error.message);
     throw error;
   }
 }
 
 /**
- * Поточний користувач (перевірка сесії).
- * Повертаємо або data.user, або data як є — залежно від бекенда.
+ * POST /auth/login
+ * Зберігає токен та експірацію у LocalStorage через utils/token
+ * @returns {Promise<any>} server data
  */
-export async function me() {
-  const { data } = await api.get("/auth/me");
-  return data?.user ?? data ?? null;
+export async function login(email, password) {
+  try {
+    const { data } = await api.post("/auth/login", { email, password });
+
+    // Очікуємо { token, exp, user } — але підстрахуємось під інші назви, якщо бекенд віддає інакше
+    const token =
+      data?.token || data?.accessToken || data?.jwt || data?.access_token;
+
+    // exp: seconds from now або unix-час у секундах — залишаємо як є, утиліта прийме seconds
+    const expSeconds =
+      data?.exp ?? data?.expiresIn ?? data?.expires_in ?? null;
+
+    if (token) {
+      setToken(token, expSeconds);
+    }
+
+    return data;
+  } catch (error) {
+    console.log("LOGIN_ERROR:", error?.response?.data || error.message);
+    throw error;
+  }
 }
 
 /**
- * Перевірка зайнятості email (якщо ендпойнт доступний).
+ * GET /auth/me
+ * @returns {Promise<any>} user payload or {user}
+ */
+export async function me() {
+  try {
+    const { data } = await api.get("/auth/me");
+    return data;
+  } catch (error) {
+    console.log("ME_ERROR:", error?.response?.data || error.message);
+    throw error;
+  }
+}
+
+/**
+ * GET /auth/checkEmail?email=...
+ * @returns {Promise<any>} server data (наприклад {available: boolean})
  */
 export async function checkEmail(email) {
-  const { data } = await api.get("/auth/checkEmail", { params: { email } });
-  return data;
+  try {
+    const { data } = await api.get("/auth/checkEmail", {
+      params: { email },
+    });
+    return data;
+  } catch (error) {
+    console.log("CHECK_EMAIL_ERROR:", error?.response?.data || error.message);
+    throw error;
+  }
+}
+
+/**
+ * Хелпер для явного логауту (очищає токен локально)
+ */
+export function logoutLocal() {
+  clearToken();
 }
