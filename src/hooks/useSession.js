@@ -1,22 +1,24 @@
 import { useEffect, useState } from "react";
 import { me } from "../service/auth";
+import { isExpired, clearToken } from "../utils/token";
 
 export default function useSession() {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("jwt");
-    if (!token) { setChecking(false); return; }
-
+    if (isExpired()) {
+      clearToken();
+      setChecking(false);
+      return;
+    }
     me()
       .then((u) => {
         setUser(u);
         if (u) localStorage.setItem("finu_user", JSON.stringify(u));
       })
       .catch(() => {
-        localStorage.removeItem("jwt");
-        localStorage.removeItem("finu_user");
+        clearToken();
       })
       .finally(() => setChecking(false));
   }, []);

@@ -2,8 +2,9 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import LoginForm from "./components/LoginForm";
 import RegistrationForm from "./components/RegistrationForm";
-import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Cabinet from "./pages/Cabinet";
+import { ToastProvider } from "./context/ToastContext";
 
 function Home() {
   return (
@@ -22,18 +23,23 @@ function Home() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/register" element={<RegistrationForm />} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="*" element={<div className="p-6">404</div>} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/register" element={<RegistrationForm />} />
+          <Route
+            path="/cabinet"
+            element={
+              <ProtectedRoute>
+                <Cabinet />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<div className="p-6">404</div>} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }

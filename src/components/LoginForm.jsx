@@ -1,23 +1,27 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../service/auth"; // шлях: src/service/auth.js
+import { login, me } from "../service/auth";
+import { cleanEmail } from "../utils/clean";
+import { setToken } from "../utils/token";
+import { useToast } from "../context/ToastContext";
 
-// Простий email-регекс для MVP
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 export default function LoginForm() {
   const nav = useNavigate();
+  const { show } = useToast();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // === Валідація полів ===
   const errors = useMemo(() => {
     const e = {};
-    if (!email.trim()) e.email = "Вкажіть email";
-    else if (!EMAIL_RE.test(email)) e.email = "Некоректний email";
+    const emailClean = cleanEmail(email);
+    if (!emailClean) e.email = "Вкажіть email";
+    else if (!EMAIL_RE.test(emailClean)) e.email = "Некоректний email";
     if (!password) e.password = "Вкажіть пароль";
     return e;
   }, [email, password]);
@@ -25,7 +29,6 @@ export default function LoginForm() {
   const isValid = Object.keys(errors).length === 0;
   const markTouched = (f) => setTouched((t) => ({ ...t, [f]: true }));
 
-  // === Сабміт форми ===
   async function handleSubmit(e) {
     e.preventDefault();
     setTouched({ email: true, password: true });
@@ -34,24 +37,19 @@ export default function LoginForm() {
 
     try {
       setSubmitting(true);
-      const data = await login(email.trim(), password);
-
-      // Очікуємо { token, user }
-      if (data?.token) localStorage.setItem("jwt", data.token);
-      if (data?.user) localStorage.setItem("finu_user", JSON.stringify(data.user));
-
-      // Редірект у дашборд
-      nav("/dashboard", { replace: true });
+      const { token } = await login(cleanEmail(email), password);
+      if (!token) throw new Error("No token");
+      setToken(token, 24 * 60 * 60); // 24h
+      // підтверджуємо сесію і кешуємо користувача
+      const user = await me();
+      if (user) localStorage.setItem("finu_user", JSON.stringify(user));
+      show("Успішний вхід", "success");
+      nav("/cabinet", { replace: true });
     } catch (err) {
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message;
-      console.log("LOGIN_ERR", status, err?.response?.data);
-
-      setErrorMsg(
-        status === 401
-          ? serverMsg || "Невірний email або пароль"
-          : "Сталася помилка. Спробуйте ще раз."
-      );
+      setErrorMsg(status === 401 ? (serverMsg || "Invalid credentials") : "Сталася помилка. Спробуйте ще раз.");
+      show(status === 401 ? "Невірний email або пароль" : "Помилка входу", "error");
     } finally {
       setSubmitting(false);
     }
@@ -67,63 +65,48 @@ export default function LoginForm() {
           </header>
 
           {errorMsg && (
-            <div
-              className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800"
-              role="alert"
-            >
+            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800" role="alert">
               {errorMsg}
             </div>
           )}
 
           <form onSubmit={handleSubmit} noValidate>
-            {/* Email */}
             <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                Email
-              </label>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email</label>
               <input
                 id="email"
                 name="email"
                 type="email"
+                inputMode="email"
+                autoCapitalize="none"
                 autoComplete="email"
                 className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.email && errors.email
-                    ? "border-rose-300 ring-rose-100"
-                    : "border-slate-300 focus:ring-indigo-200"
+                  touched.email && errors.email ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
                 }`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => markTouched("email")}
                 aria-invalid={Boolean(touched.email && errors.email)}
               />
-              {touched.email && errors.email && (
-                <p className="mt-1 text-xs text-rose-600">{errors.email}</p>
-              )}
+              {touched.email && errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email}</p>}
             </div>
 
-            {/* Пароль */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Пароль
-              </label>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700">Пароль</label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="current-password"
                 className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.password && errors.password
-                    ? "border-rose-300 ring-rose-100"
-                    : "border-slate-300 focus:ring-indigo-200"
+                  touched.password && errors.password ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
                 }`}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={() => markTouched("password")}
                 aria-invalid={Boolean(touched.password && errors.password)}
               />
-              {touched.password && errors.password && (
-                <p className="mt-1 text-xs text-rose-600">{errors.password}</p>
-              )}
+              {touched.password && errors.password && <p className="mt-1 text-xs text-rose-600">{errors.password}</p>}
             </div>
 
             <button
@@ -135,12 +118,10 @@ export default function LoginForm() {
               {submitting ? "Входимо…" : "Увійти"}
             </button>
 
-            {/* Лінк на реєстрацію */}
             <p className="mt-4 text-center text-sm text-slate-600">
-  Немає акаунта?{" "}
-  <a href="/register" className="text-indigo-600 hover:underline">Зареєструватись</a>
-</p>
-
+              Немає акаунта?{" "}
+              <a href="/register" className="text-indigo-600 hover:underline">Зареєструватись</a>
+            </p>
           </form>
         </div>
       </div>

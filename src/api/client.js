@@ -1,38 +1,43 @@
 import axios from "axios";
+import { getToken, clearToken, isExpired } from "../utils/token";
 
-const baseURL =
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? "http://localhost:3000" : undefined);
+// Sprint 2: чітко вимагають цей домен
+const baseURL = "https://fintechbackend.online";
 
 const api = axios.create({ baseURL });
 
-function hardLogout() {
-  localStorage.removeItem("jwt");
-  localStorage.removeItem("finu_user");
-  window.location.assign("/login");
-}
-
-// Додаємо Bearer
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("jwt");
+  // якщо токен прострочений — одразу до логіну
+  if (isExpired()) {
+    clearToken();
+    if (typeof window !== "undefined" && location.pathname !== "/login") {
+      window.location.assign("/login");
+    }
+    // кидати помилку не будемо — нехай запит не піде
+    return Promise.reject(new axios.Cancel("token expired"));
+  }
+  const token = getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// 403 → логаут. 401 (крім /auth/login) → логаут.
-// 401 на /auth/login НЕ редіректить, щоб показати помилку на формі.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     const status = err?.response?.status;
-    const url = err?.config?.url || "";
-
     if (status === 403) {
-      hardLogout();
+      // уніфікований: редірект на логін
+      if (typeof window !== "undefined") {
+        window.location.assign("/login");
+      }
       return;
     }
-    if (status === 401 && !url.includes("/auth/login")) {
-      hardLogout();
+    if (status === 401) {
+      // уніфікований: чистимо токен і на логін
+      clearToken();
+      if (typeof window !== "undefined") {
+        window.location.assign("/login");
+      }
       return;
     }
     return Promise.reject(err);
