@@ -7,16 +7,9 @@ export default function useSession() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (isExpired()) {
-      clearToken();
-      setChecking(false);
-      return;
-    }
+    if (isExpired()) { clearToken(); setChecking(false); return; }
     me()
-      .then((u) => {
-        setUser(u);
-        if (u) localStorage.setItem("finu_user", JSON.stringify(u));
-      })
+      .then((u) => { setUser(u); if (u) localStorage.setItem("finu_user", JSON.stringify(u)); })
       .catch(() => clearToken())
       .finally(() => setChecking(false));
   }, []);

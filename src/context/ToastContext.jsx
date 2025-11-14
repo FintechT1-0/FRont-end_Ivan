@@ -20,7 +20,4 @@ export function ToastProvider({ children }) {
     </ToastCtx.Provider>
   );
 }
-
-export function useToast() {
-  return useContext(ToastCtx);
-}
+export function useToast() { return useContext(ToastCtx); }

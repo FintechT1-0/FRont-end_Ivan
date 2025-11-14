@@ -2,10 +2,7 @@ import React from "react";
 
 export default function Cabinet() {
   const user = JSON.parse(localStorage.getItem("finu_user") || "null");
-  const logout = () => {
-    localStorage.clear();
-    window.location.assign("/login");
-  };
+  const logout = () => { localStorage.clear(); window.location.assign("/login"); };
 
   return (
     <div className="min-h-screen p-6 bg-slate-50">
