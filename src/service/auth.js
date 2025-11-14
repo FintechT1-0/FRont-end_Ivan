@@ -1,4 +1,3 @@
-// src/service/auth.js
 import api from "../api/client";
 import { setToken, clearToken } from "../utils/token";
 
