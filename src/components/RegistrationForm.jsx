@@ -187,7 +187,7 @@ function RegistrationForm({ onSuccess }) {
                   {errors.password}
                 </p>
               )}
-              <p className="mt-1 text-[11px] text-slate-500">Мінімум 8 символів. Для продакшну додайте вимоги до складності.</p>
+              <p className="mt-1 text-[11px] text-slate-500">Мінімум 8 символів.</p>
             </div>
 
             {/* Confirm Password */}
