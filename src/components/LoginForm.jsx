@@ -1,10 +1,8 @@
-// src/components/LoginForm.jsx
 import React, { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../service/auth";
 import { setToken } from "../utils/token";
 
-// простий regex для MVP
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 
 export default function LoginForm() {
@@ -42,7 +40,6 @@ export default function LoginForm() {
     try {
       setSubmitting(true);
 
-      // (5) рівно { email, password }
       const { token, user } = await login(
         String(email).trim().toLowerCase(),
         password
@@ -52,18 +49,14 @@ export default function LoginForm() {
         throw new Error("No token in response");
       }
 
-      // зберігаємо токен на 24 години (в utils/token.js ttl = 24h за замовчуванням)
       setToken(token);
 
-      // опційно кешуємо користувача, якщо бек повернув
       if (user) {
         localStorage.setItem("finu.user", JSON.stringify(user));
       }
 
-      // (вимога) після успішного login → /cabinet
       navigate("/cabinet", { replace: true });
     } catch (err) {
-      // (3) логування помилки
       console.log("LOGIN_ERR_CATCH:", err?.response?.data || err.message);
 
       const status = err?.response?.status;
@@ -74,8 +67,7 @@ export default function LoginForm() {
           ? err.response.data
           : null);
 
-      // (6) обробка 401 — інтерсептор вже робить clear+redirect,
-      // але тут показуємо зрозуміле повідомлення
+
       let msg = "Сталася помилка. Спробуйте ще раз.";
       if (status === 401) msg = serverMsg || "Невірний email або пароль";
       else if (status === 400) msg = serverMsg || "Некоректні дані";

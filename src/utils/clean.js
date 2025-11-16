@@ -4,3 +4,4 @@ export function cleanEmail(raw) {
     .trim()
     .toLowerCase();
 }
+// the rest is clean. 

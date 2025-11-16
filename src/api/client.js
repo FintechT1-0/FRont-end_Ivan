@@ -1,8 +1,6 @@
-// src/api/client.js
 import axios from "axios";
 import { getToken, clearToken } from "../utils/token";
 
-// У деві базовий шлях = '/' (проксі), у проді — домен
 const baseURL = import.meta.env.DEV ? "/" : "https://fintechbackend.online";
 console.log("API baseURL =", baseURL);
 

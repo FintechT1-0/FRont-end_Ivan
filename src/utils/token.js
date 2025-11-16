@@ -1,9 +1,6 @@
-// src/utils/token.js
-
 const KEY_ACCESS = 'finu.access';
 const KEY_EXP    = 'finu.exp';
 
-/** Зберегти токен і час життя (у секундах) */
 export function setToken(token, expSeconds = 24 * 60 * 60) {
   try {
     const now = Math.floor(Date.now() / 1000);
@@ -13,11 +10,10 @@ export function setToken(token, expSeconds = 24 * 60 * 60) {
   } catch {}
 }
 
-/** true, якщо токен прострочений (або немає exp) */
 export function isExpired() {
   try {
     const exp = Number(localStorage.getItem(KEY_EXP) || 0);
-    if (!exp) return false; // якщо бек не дав exp — вважаємо дійсним до явного logout
+    if (!exp) return false; 
     const now = Math.floor(Date.now() / 1000);
     return now >= exp;
   } catch {
@@ -25,7 +21,6 @@ export function isExpired() {
   }
 }
 
-/** Отримати токен; якщо прострочений — очистити й повернути null */
 export function getToken() {
   try {
     const token = localStorage.getItem(KEY_ACCESS);

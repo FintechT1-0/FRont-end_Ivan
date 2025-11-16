@@ -1,12 +1,10 @@
-// src/service/auth.js
 import api from "../api/client";
 import { setToken, clearToken } from "../utils/token";
 
-// УВАГА: лише відносні шляхи `/auth/...` — НІЯКИХ повних URL тут!
 export async function checkEmail(email) {
   try {
     const { data } = await api.post("/auth/checkEmail", { email });
-    return data; // { exists: boolean }
+    return data; 
   } catch (e) {
     console.log("CHECK_EMAIL_ERROR:", e?.response?.data || e.message);
     throw e;

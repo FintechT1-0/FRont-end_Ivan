@@ -1,4 +1,3 @@
-// src/components/RegistrationForm.jsx
 import React, { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { register as apiRegister, checkEmail } from "../service/auth";
@@ -53,7 +52,7 @@ export default function RegistrationForm() {
     try {
       setSubmitting(true);
 
-      // 1) Опціонально: перевірка, чи email вже існує (POST /auth/checkEmail)
+      
       try {
         const chk = await checkEmail(String(email).trim().toLowerCase());
         if (chk?.exists === true) {
@@ -62,11 +61,11 @@ export default function RegistrationForm() {
           return;
         }
       } catch (e) {
-        // Якщо бек не піднятий для цього — просто ігноруємо та пробуємо реєстрацію
+        
         console.log("CHECK_EMAIL_WARN:", e?.response?.data || e.message);
       }
 
-      // 2) Реєстрація — бек очікує name/surname
+      
       const payload = {
         name: firstName.trim(),
         surname: lastName.trim(),
