@@ -1,44 +1,29 @@
-const KEY_ACCESS = 'finu.access';
-const KEY_EXP    = 'finu.exp';
+const KEY_ACCESS = "finu.access"
+const KEY_EXP = "finu.exp"
+const TTL_MS = 24 * 60 * 60 * 1000
 
-export function setToken(token, expSeconds = 24 * 60 * 60) {
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    const exp = now + Number(expSeconds || 0);
-    localStorage.setItem(KEY_ACCESS, token);
-    localStorage.setItem(KEY_EXP, String(exp));
-  } catch {}
-}
-
-export function isExpired() {
-  try {
-    const exp = Number(localStorage.getItem(KEY_EXP) || 0);
-    if (!exp) return false; 
-    const now = Math.floor(Date.now() / 1000);
-    return now >= exp;
-  } catch {
-    return false;
-  }
+export function setToken(token, ttlMs = TTL_MS) {
+  localStorage.setItem(KEY_ACCESS, token || "")
+  const exp = Date.now() + ttlMs
+  localStorage.setItem(KEY_EXP, String(exp))
 }
 
 export function getToken() {
-  try {
-    const token = localStorage.getItem(KEY_ACCESS);
-    if (!token) return null;
-    if (isExpired()) {
-      clearToken();
-      return null;
-    }
-    return token;
-  } catch {
-    return null;
-  }
+  return localStorage.getItem(KEY_ACCESS) || ""
 }
 
-/** Очистити токен */
+export function tokenExpiry() {
+  const v = localStorage.getItem(KEY_EXP)
+  return v ? Number(v) : 0
+}
+
+export function isExpired() {
+  const exp = tokenExpiry()
+  if (!exp) return true
+  return Date.now() >= exp
+}
+
 export function clearToken() {
-  try {
-    localStorage.removeItem(KEY_ACCESS);
-    localStorage.removeItem(KEY_EXP);
-  } catch {}
+  localStorage.removeItem(KEY_ACCESS)
+  localStorage.removeItem(KEY_EXP)
 }

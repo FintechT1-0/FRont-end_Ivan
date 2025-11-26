@@ -1,198 +1,191 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { register as apiRegister, checkEmail } from "../service/auth";
+import React, { useMemo, useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import { register, checkEmail } from "../service/auth.js"
+import { useToast } from "../context/ToastContext.jsx"
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i
+const NAME_RE = /^[A-Z][a-z]{0,39}$/
+
+function normalizeName(s) {
+  s = s.trim()
+  return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s
+}
 
 export default function RegistrationForm() {
-  const navigate = useNavigate();
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName,  setLastName]  = useState("");
-  const [email,     setEmail]     = useState("");
-  const [password,  setPassword]  = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [touched, setTouched] = useState({
-    firstName: false, lastName: false, email: false, password: false, confirmPassword: false
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
+  const nav = useNavigate()
+  const { notify } = useToast()
+  const [name, setName] = useState("")
+  const [surname, setSurname] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [touched, setTouched] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg] = useState(null)
+  const [emailWarn, setEmailWarn] = useState(null)
 
   const errors = useMemo(() => {
-    const e = {};
-    const emailClean = String(email || "").trim().toLowerCase();
+    const e = {}
+    if (!name.trim()) e.name = "Вкажіть ім'я"
+    else if (!NAME_RE.test(name.trim())) e.name = "Формат: Перша літера велика, далі малі (латиниця), до 40 символів."
+    if (!surname.trim()) e.surname = "Вкажіть прізвище"
+    else if (!NAME_RE.test(surname.trim())) e.surname = "Формат: Перша літера велика, далі малі (латиниця), до 40 символів."
+    if (!email.trim()) e.email = "Вкажіть email"
+    else if (!EMAIL_RE.test(email)) e.email = "Некоректний email"
+    if (!password) e.password = "Вкажіть пароль"
+    else if (password.length < 8) e.password = "Мінімум 8 символів"
+    if (!confirmPassword) e.confirmPassword = "Повторіть пароль"
+    else if (confirmPassword !== password) e.confirmPassword = "Паролі не збігаються"
+    return e
+  }, [name, surname, email, password, confirmPassword])
 
-    if (!firstName.trim()) e.firstName = "Вкажіть ім'я";
-    if (!lastName.trim())  e.lastName  = "Вкажіть прізвище";
+  const isValid = Object.keys(errors).length === 0
+  const markTouched = (f) => setTouched((t) => ({ ...t, [f]: true }))
 
-    if (!emailClean) e.email = "Вкажіть email";
-    else if (!EMAIL_RE.test(emailClean)) e.email = "Некоректний email";
-
-    if (!password) e.password = "Вкажіть пароль";
-    else if (password.length < 8) e.password = "Мінімум 8 символів";
-
-    if (!confirmPassword) e.confirmPassword = "Повторіть пароль";
-    else if (confirmPassword !== password) e.confirmPassword = "Паролі не збігаються";
-
-    return e;
-  }, [firstName, lastName, email, password, confirmPassword]);
-
-  const isValid = Object.keys(errors).length === 0;
-  const markTouched = (f) => setTouched((t) => ({ ...t, [f]: true }));
-
-  async function handleSubmit(ev) {
-    ev.preventDefault();
-    setTouched({ firstName: true, lastName: true, email: true, password: true, confirmPassword: true });
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    if (!isValid) return;
-
+  async function handleCheckEmail() {
+    setEmailWarn(null)
+    if (!EMAIL_RE.test(email)) return
     try {
-      setSubmitting(true);
+      const res = await checkEmail(email.trim())
+      if (res?.exists) setEmailWarn("Email вже зайнятий")
+    } catch {}
+  }
 
-      
-      try {
-        const chk = await checkEmail(String(email).trim().toLowerCase());
-        if (chk?.exists === true) {
-          setErrorMsg("Email already in use");
-          setSubmitting(false);
-          return;
-        }
-      } catch (e) {
-        
-        console.log("CHECK_EMAIL_WARN:", e?.response?.data || e.message);
-      }
-
-      
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setTouched({ name: true, surname: true, email: true, password: true, confirmPassword: true })
+    setErrorMsg(null)
+    if (!isValid) return
+    try {
+      setSubmitting(true)
       const payload = {
-        name: firstName.trim(),
-        surname: lastName.trim(),
-        email: String(email).trim().toLowerCase(),
+        name: normalizeName(name),
+        surname: normalizeName(surname),
+        email: email.trim(),
         password
-      };
-
-      const data = await apiRegister(payload);
-      console.log("REGISTER_OK:", data);
-
-      setSuccessMsg("Реєстрація успішна. Увійдіть у систему.");
-      setTimeout(() => navigate("/login", { replace: true }), 600);
-    } catch (err) {
-      console.log("REGISTER_ERR_CATCH:", err?.response?.data || err.message);
-      const status = err?.response?.status;
-      const d = err?.response?.data;
-
-      let msg =
-        (typeof d === "string" && d) ||
-        d?.message || d?.detail ||
-        "Не вдалося зареєструватись.";
-
-      if (status === 409) msg = "Email already in use";
-      if (status === 405) msg = "Метод не дозволено (перевір URL/метод/Content-Type)";
-      if (status === 400 && Array.isArray(d?.errors) && d.errors.length) {
-        msg = d.errors[0]?.message || msg;
       }
-
-      setErrorMsg(msg);
+      await register(payload)
+      notify("Акаунт створено. Увійдіть.", "success")
+      nav("/login", { replace: true })
+    } catch (err) {
+      const status = err?.response?.status
+      const data = err?.response?.data
+      let msg = data?.message || data?.detail || "Не вдалося зареєструватись."
+      if (status === 409) msg = "Email вже використовується"
+      if (status === 422) {
+        const detail = data?.detail
+        const map = {}
+        if (Array.isArray(detail)) {
+          detail.forEach((d) => {
+            const loc = Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : null
+            if (loc && typeof d?.msg === "string") {
+              map[loc] = /should match pattern/.test(d.msg)
+                ? "Формат: перша літера велика, далі малі (латиниця), до 40 символів."
+                : d.msg
+            }
+          })
+        }
+        if (map.name) msg = map.name
+        if (map.surname) msg = map.surname
+        if (map.email) msg = map.email
+        if (map.password) msg = map.password
+      }
+      setErrorMsg(msg)
+      notify("Помилка реєстрації", "error")
+      console.log(err?.response?.data || err?.message)
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white shadow-xl rounded-2xl p-6">
           <header className="mb-6">
             <h1 className="text-2xl font-semibold tracking-tight">FinTech UniVerse 1.0</h1>
-            <p className="text-sm text-slate-500">Реєстрація акаунта</p>
+            <p className="text-sm text-slate-500">Реєстрація акаунта (MVP)</p>
           </header>
 
-          {successMsg && (
-            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800" role="status">
-              {successMsg}
-            </div>
-          )}
           {errorMsg && (
-            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800" role="alert">
+            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800">
               {errorMsg}
             </div>
           )}
 
           <form onSubmit={handleSubmit} noValidate>
-            {/* Ім'я */}
             <div className="mb-4">
-              <label htmlFor="firstName" className="block text-sm font-medium text-slate-700">Ім'я</label>
+              <label htmlFor="name" className="block text-sm font-medium text-slate-700">Ім'я</label>
               <input
-                id="firstName" type="text" autoComplete="given-name"
-                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.firstName && errors.firstName ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
-                }`}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                onBlur={() => markTouched("firstName")}
+                id="name"
+                type="text"
+                placeholder="Ваше ім'я"
+                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${touched.name && errors.name ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"}`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => { setName((v) => normalizeName(v)); markTouched("name") }}
+                aria-invalid={Boolean(touched.name && errors.name)}
               />
-              {touched.firstName && errors.firstName && <p className="mt-1 text-xs text-rose-600">{errors.firstName}</p>}
+              {touched.name && errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name}</p>}
             </div>
 
-            {/* Прізвище */}
             <div className="mb-4">
-              <label htmlFor="lastName" className="block text-sm font-medium text-slate-700">Прізвище</label>
+              <label htmlFor="surname" className="block text-sm font-medium text-slate-700">Прізвище</label>
               <input
-                id="lastName" type="text" autoComplete="family-name"
-                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.lastName && errors.lastName ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
-                }`}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                onBlur={() => markTouched("lastName")}
+                id="surname"
+                type="text"
+                placeholder="Ваше прізвище"
+                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${touched.surname && errors.surname ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"}`}
+                value={surname}
+                onChange={(e) => setSurname(e.target.value)}
+                onBlur={() => { setSurname((v) => normalizeName(v)); markTouched("surname") }}
+                aria-invalid={Boolean(touched.surname && errors.surname)}
               />
-              {touched.lastName && errors.lastName && <p className="mt-1 text-xs text-rose-600">{errors.lastName}</p>}
+              {touched.surname && errors.surname && <p className="mt-1 text-xs text-rose-600">{errors.surname}</p>}
             </div>
 
-            {/* Email */}
             <div className="mb-4">
               <label htmlFor="email" className="block text-sm font-medium text-slate-700">Email</label>
               <input
-                id="email" type="email" inputMode="email" autoCapitalize="none" autoComplete="email"
-                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.email && errors.email ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
-                }`}
+                id="email"
+                type="email"
+                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${touched.email && errors.email ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"}`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => markTouched("email")}
+                onBlur={() => { markTouched("email"); handleCheckEmail() }}
+                aria-invalid={Boolean(touched.email && errors.email)}
               />
               {touched.email && errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email}</p>}
+              {!errors.email && emailWarn && <p className="mt-1 text-xs text-amber-600">{emailWarn}</p>}
             </div>
 
-            {/* Пароль */}
             <div className="mb-4">
               <label htmlFor="password" className="block text-sm font-medium text-slate-700">Пароль</label>
               <input
-                id="password" type="password" autoComplete="new-password"
-                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.password && errors.password ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
-                }`}
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${touched.password && errors.password ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"}`}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={() => markTouched("password")}
+                aria-invalid={Boolean(touched.password && errors.password)}
               />
               {touched.password && errors.password && <p className="mt-1 text-xs text-rose-600">{errors.password}</p>}
               <p className="mt-1 text-[11px] text-slate-500">Мінімум 8 символів.</p>
             </div>
 
-            {/* Повтор пароля */}
             <div className="mb-6">
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">Повторити пароль</label>
               <input
-                id="confirmPassword" type="password" autoComplete="new-password"
-                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${
-                  touched.confirmPassword && errors.confirmPassword ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"
-                }`}
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                className={`mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 ${touched.confirmPassword && errors.confirmPassword ? "border-rose-300 ring-rose-100" : "border-slate-300 focus:ring-indigo-200"}`}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onBlur={() => markTouched("confirmPassword")}
+                aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
               />
               {touched.confirmPassword && errors.confirmPassword && <p className="mt-1 text-xs text-rose-600">{errors.confirmPassword}</p>}
             </div>
@@ -205,14 +198,13 @@ export default function RegistrationForm() {
             >
               {submitting ? "Створюємо акаунт…" : "Зареєструватись"}
             </button>
-
-            <p className="mt-4 text-center text-sm text-slate-600">
-              Вже маєте акаунт?{" "}
-              <Link to="/login" className="text-indigo-600 hover:underline">Увійти</Link>
-            </p>
           </form>
+
+          <p className="mt-4 text-center text-sm text-slate-500">
+            Вже маєте акаунт? <Link to="/login" className="text-indigo-600">Увійти</Link>
+          </p>
         </div>
       </div>
     </div>
-  );
+  )
 }

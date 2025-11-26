@@ -1,41 +1,18 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
-import LoginForm from "./components/LoginForm";
-import RegistrationForm from "./components/RegistrationForm";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Cabinet from "./pages/Cabinet";
-
-function Home() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <div className="bg-white rounded-2xl shadow p-6 w-full max-w-md">
-        <h1 className="text-2xl font-semibold mb-3">FinTech UniVerse 1.0</h1>
-        <p className="text-slate-600 mb-4">Оберіть дію:</p>
-        <div className="grid gap-3">
-          <Link className="rounded-xl bg-indigo-600 text-white px-4 py-2 text-center" to="/login">
-            Увійти
-          </Link>
-          <Link className="rounded-xl bg-slate-900 text-white px-4 py-2 text-center" to="/register">
-            Зареєструватись
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
+import React from "react"
+import { Routes, Route, Navigate } from "react-router-dom"
+import LoginForm from "./components/LoginForm.jsx"
+import RegistrationForm from "./components/RegistrationForm.jsx"
+import ProtectedRoute from "./components/ProtectedRoute.jsx"
+import Cabinet from "./pages/Cabinet.jsx"
+import { ToastProvider } from "./context/ToastContext.jsx"
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <ToastProvider>
       <Routes>
-        {/* Домашня */}
-        <Route path="/" element={<Home />} />
-
-        {/* Публічні */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/register" element={<RegistrationForm />} />
-
-        {/* Приватні */}
         <Route
           path="/cabinet"
           element={
@@ -44,10 +21,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Фолбек */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </BrowserRouter>
-  );
+    </ToastProvider>
+  )
 }
