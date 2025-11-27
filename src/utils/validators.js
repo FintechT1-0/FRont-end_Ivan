@@ -1,5 +1,5 @@
 // Ім'я/Прізвище: латиниця/українська, апостроф, дефіс, пробіл; довжина 2..50 і так далі
-export const NAME_RE = /^[A-Za-zА-Яа-яІіЇїЄєҐґ'’\- ]{2,50}$/;
+export const NAME_RE = /^[A-Za-zА-Яа-я'’\- ]{2,50}$/;
 
 export function validateName(value) {
   const v = String(value || '').trim();
