@@ -1,34 +1,31 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { me } from "../service/auth";
 
 export default function Cabinet() {
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(true);
   const [fullName, setFullName] = useState("");
   const [avatar, setAvatar] = useState(localStorage.getItem("finu.avatar") || "");
   const fileRef = useRef(null);
 
   useEffect(() => {
-    let ok = true;
+    let alive = true;
     (async () => {
       try {
         const res = await me();
         const u = res?.user ?? res;
         const nm = [u?.name, u?.surname].filter(Boolean).join(" ").trim();
-        if (ok) setFullName(nm || "User");
+        if (alive) setFullName(nm || "Ім'я");
       } catch {
-        if (ok) setFullName("User");
+        if (alive) setFullName("Ім'я");
       }
     })();
-    return () => {
-      ok = false;
-    };
+    return () => { alive = false; };
   }, []);
 
-  function openFile() {
-    fileRef.current?.click();
-  }
-
-  function onFile(e) {
+  const openFile = () => fileRef.current?.click();
+  const onFile = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const r = new FileReader();
@@ -38,77 +35,146 @@ export default function Cabinet() {
       localStorage.setItem("finu.avatar", url);
     };
     r.readAsDataURL(f);
-  }
+  };
 
   return (
-    <div className="min-h-screen w-screen bg-[#e4e1dc] overflow-x-hidden">
+    <div className="min-h-screen w-screen bg-[#e4e1dc] relative overflow-x-hidden">
       <aside
-        className={`fixed top-0 left-0 h-full w-[240px] bg-[#d9d9d9] p-6 transition-transform duration-200 ${
-          open ? "translate-x-0" : "-translate-x-full"
+        className={`fixed left-0 top-0 h-full w-[240px] bg-[#d9d9d9] p-5 transition-transform duration-200 z-20 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <button onClick={() => setOpen(false)} className="absolute right-5 top-4 text-black/70 text-xl" aria-label="close">×</button>
-        <div className="w-12 h-12 rounded-[14px] bg-[#eceae6]" />
-        <div className="mt-8 space-y-5">
-          <div className="h-[4px] w-24 rounded-full bg-white" />
-          <div className="h-[4px] w-28 rounded-full bg-white" />
-          <div className="h-[4px] w-20 rounded-full bg-white" />
-          <div className="h-[4px] w-24 rounded-full bg-white" />
+        <button
+          onClick={() => setMenuOpen(false)}
+          className="absolute right-4 top-4 text-black/70"
+          aria-label="collapse"
+          title="Згорнути меню"
+        >
+          ×
+        </button>
+
+        <div className="w-9 h-9 rounded-[12px] bg-[#eceae6]" />
+
+        <div className="mt-6 space-y-5">
+          <div className="h-[3px] w-14 rounded-full bg-white" />
+          {/* 2-га смужка = кнопка Перейти на головну */}
+          <button
+            onClick={() => navigate("/")}
+            className="block h-[3px] w-16 rounded-full bg-white hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-white/60 cursor-pointer -my-1 py-2"
+            aria-label="На головну"
+            title="Головна сторінка"
+          />
+          <div className="h-[3px] w-12 rounded-full bg-white" />
+          <div className="h-[3px] w-14 rounded-full bg-white" />
         </div>
-        <div className="absolute left-6 bottom-24 space-y-4">
-          <div className="h-[4px] w-24 rounded-full bg-white" />
-          <div className="h-[4px] w-20 rounded-full bg-white" />
-          <div className="h-[4px] w-28 rounded-full bg-white" />
+
+        <div className="absolute left-5 bottom-16 space-y-4">
+          <div className="h-[3px] w-14 rounded-full bg-white" />
+          <div className="h-[3px] w-12 rounded-full bg-white" />
+          <div className="h-[3px] w-16 rounded-full bg-white" />
         </div>
-        <button onClick={openFile} className="absolute left-6 bottom-6 flex items-center gap-3" aria-label="profile">
+
+        <button
+          onClick={openFile}
+          className="absolute left-5 bottom-5 flex items-center gap-3"
+          aria-label="open profile"
+          title="Відкрити профіль / змінити аватар"
+        >
           <span
             className="inline-block w-7 h-7 rounded-full bg-[#a6a3a3] ring-1 ring-white/60 overflow-hidden"
-            style={avatar ? { backgroundImage: `url(${avatar})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+            style={
+              avatar
+                ? {
+                    backgroundImage: `url(${avatar})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
           />
-          <span className="inline-block h-[4px] w-24 rounded-full bg-[#d0ceca]" />
+          <span className="inline-block h-[3px] w-16 rounded-full bg-[#d0ceca]" />
         </button>
       </aside>
 
-      {!open && (
-        <button onClick={() => setOpen(true)} className="fixed left-5 top-5 z-10 rounded-full bg-[#d9d9d9] px-3 py-1 text-sm">Меню</button>
+      {!menuOpen && (
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="fixed left-5 bottom-6 z-10 flex items-center gap-3"
+          aria-label="expand"
+          title="Розгорнути меню"
+        >
+          <span
+            className="inline-block w-6 h-6 rounded-full bg-[#a6a3a3]"
+            style={
+              avatar
+                ? {
+                    backgroundImage: `url(${avatar})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
+          />
+          <span className="inline-block h-[3px] w-16 rounded-full bg-[#d0ceca]" />
+        </button>
       )}
 
       <input ref={fileRef} onChange={onFile} type="file" accept="image/*" className="hidden" />
 
-      <main className={`min-h-screen transition-all ${open ? "pl-[260px]" : "pl-6"}`}>
-        <div className="mx-auto max-w-[1080px] px-4 pt-6">
-          <div className="flex items-center gap-5">
+      <main
+        className={`min-h-screen w-full p-8 transition-all duration-200 ${
+          menuOpen ? "pl-[260px]" : "pl-12"
+        }`}
+      >
+        <div className="mx-auto max-w-[1400px]">
+          <div className="flex items-center gap-6">
             <button
               onClick={openFile}
-              className="w-24 h-24 rounded-full bg-[#a6a3a3] overflow-hidden ring-4 ring-white/70"
-              aria-label="avatar"
-              style={avatar ? { backgroundImage: `url(${avatar})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+              className="relative w-16 h-16 rounded-full bg-[#a6a3a3] overflow-hidden ring-2 ring-white/60"
+              aria-label="change avatar"
+              title="Змінити фото"
+              style={
+                avatar
+                  ? {
+                      backgroundImage: `url(${avatar})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : undefined
+              }
             />
-            <div>
-              <div className="inline-block rounded-md bg-black/90 px-4 py-1 text-white text-base">{fullName || "User"}</div>
-              <div className="mt-2 h-[4px] w-48 rounded-full bg-white" />
+            <div className="flex flex-col">
+              <span className="inline-block rounded-md bg-black/90 px-3 py-1 text-white text-sm">
+                {fullName || "Ім'я"}
+              </span>
+              <span className="mt-2 h-[3px] w-48 rounded-full bg-white" />
             </div>
           </div>
 
-          <section className="mt-6 grid grid-cols-12 gap-x-6 gap-y-3">
-            <div className="relative col-span-3 rounded-[22px] bg-[#e6e8ec] h-[440px]">
-              <div className="absolute -top-3 left-4 rounded-md bg-black/90 px-3 py-1 text-white text-xs">Прогрес навчання</div>
+          <div className="mt-8 grid grid-cols-[1.05fr,1.25fr,0.9fr] gap-8">
+            <div className="relative rounded-[28px] bg-[#dcdcdc] h-[340px]">
+              <div className="absolute -top-3 left-4 rounded-md bg-black/90 px-3 py-1 text-white text-xs">
+                Прогрес навчання
+              </div>
             </div>
 
-            <div className="relative col-span-6 rounded-[22px] bg-[#e6e8ec] h-[200px]">
-              <div className="absolute -top-3 left-4 rounded-md bg-black/90 px-3 py-1 text-white text-xs">Рекомендовані курси</div>
+            <div className="relative rounded-[28px] bg-[#dcdcdc] h-[250px]">
+              <div className="absolute -top-3 left-4 rounded-md bg-black/90 px-3 py-1 text-white text-xs">
+                Рекомендовані курси
+              </div>
             </div>
 
-            <div className="relative col-span-3 rounded-[22px] bg-[#e6e8ec] h-[200px]">
-              <div className="absolute -top-3 right-4 rounded-md bg-black/90 px-3 py-1 text-white text-xs">Остання активність</div>
+            <div className="flex flex-col gap-8">
+              <div className="relative rounded-[28px] bg-[#dcdcdc] h-[120px]">
+                <div className="absolute -top-3 right-4 rounded-md bg-black/90 px-3 py-1 text-white text-xs">
+                  Остання активність
+                </div>
+              </div>
+              <div className="rounded-[28px] bg-[#dcdcdc] h-[120px]" />
             </div>
+          </div>
 
-            <div className="relative col-span-3 col-start-10 row-start-2 rounded-[22px] bg-[#e6e8ec] h-[180px]" />
-
-            <div className="col-span-12 row-start-3">
-              <div className="w-full rounded-[22px] bg-[#e6e8ec] h-12" />
-            </div>
-          </section>
+          <div className="mt-8 w-[72%] rounded-[28px] bg-[#dcdcdc] h-[82px]" />
         </div>
       </main>
     </div>
