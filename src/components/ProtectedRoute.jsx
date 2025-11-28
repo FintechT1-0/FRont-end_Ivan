@@ -1,9 +1,9 @@
-import React from "react"
-import { Navigate } from "react-router-dom"
-import { getToken, isExpired } from "../utils/token.js"
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { getToken } from "../utils/token";
 
-export default function ProtectedRoute({ children }) {
-  const tk = getToken()
-  if (!tk || isExpired()) return <Navigate to="/login" replace />
-  return children
+export default function ProtectedRoute() {
+  const token = getToken();
+  const loc = useLocation();
+  if (!token) return <Navigate to="/login" replace state={{ from: loc }} />;
+  return <Outlet />;
 }
