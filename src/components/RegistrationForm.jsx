@@ -105,9 +105,9 @@ export default function RegistrationForm() {
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="mb-6">
-              <label className="block text-sm mb-2">login</label>
+              <label className="block text-sm mb-2">First name</label>
               <input
-                className={`w-full rounded-2xl px-4 py-3 bg-[#e8eefc] outline-none ring-0 border ${
+                className={`w-full rounded-2xl px-4 py-3 bg-[#f5f5f5] outline-none ring-0 border ${
                   touched.name && errors.name ? "border-rose-300" : "border-slate-300"
                 }`}
                 type="text"
@@ -119,9 +119,23 @@ export default function RegistrationForm() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm mb-2">e-mail</label>
+              <label className="block text-sm mb-2">Last name</label>
               <input
-                className={`w-full rounded-2xl px-4 py-3 bg-[#e8eefc] outline-none ring-0 border ${
+                className={`w-full rounded-2xl px-4 py-3 bg-[#f5f5f5] outline-none ring-0 border ${
+                  touched.surname && errors.surname ? "border-rose-300" : "border-slate-300"
+                }`}
+                type="text"
+                value={surname}
+                onChange={(e) => setSurname(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, surname: true }))}
+                autoComplete="family-name"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm mb-2">E-mail</label>
+              <input
+                className={`w-full rounded-2xl px-4 py-3 bg-[#f5f5f5] outline-none ring-0 border ${
                   touched.email && errors.email ? "border-rose-300" : "border-slate-300"
                 }`}
                 type="email"
@@ -133,9 +147,9 @@ export default function RegistrationForm() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm mb-2">password</label>
+              <label className="block text-sm mb-2">Password</label>
               <input
-                className={`w-full rounded-2xl px-4 py-3 bg-[#e8eefc] outline-none ring-0 border ${
+                className={`w-full rounded-2xl px-4 py-3 bg-[#f5f5f5] outline-none ring-0 border ${
                   touched.password && errors.password ? "border-rose-300" : "border-slate-300"
                 }`}
                 type="password"
@@ -151,7 +165,7 @@ export default function RegistrationForm() {
                 type="checkbox"
                 checked={agree}
                 onChange={(e) => setAgree(e.target.checked)}
-                className="appearance-none w-5 h-5 rounded-full border border-slate-700 grid place-items-center"
+                className="w-5 h-5 rounded-full border border-slate-700 grid place-items-center"
               />
               <span className="text-[15px]">I Agree To The Terms And Conditions</span>
             </label>
@@ -165,7 +179,7 @@ export default function RegistrationForm() {
             </button>
 
             <div className="mt-6 text-center text-sm">
-              <Link to="/login" className="underline">sign in</Link>
+              <Link to="/login" className="underline">Sign in</Link>
             </div>
           </form>
         </div>

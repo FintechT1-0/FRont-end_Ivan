@@ -60,9 +60,9 @@ export default function LoginForm() {
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="mb-6">
-              <label className="block text-sm mb-2">login</label>
+              <label className="block text-sm mb-2">E-mail</label>
               <input
-                className={`w-full rounded-2xl px-4 py-3 bg-[#e8eefc] outline-none ring-0 border ${
+                className={`w-full rounded-2xl px-4 py-3 bg-[#f5f5f5] outline-none ring-0 border ${
                   touched.email && errors.email ? "border-rose-300" : "border-slate-300"
                 }`}
                 type="email"
@@ -74,9 +74,9 @@ export default function LoginForm() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm mb-2">password</label>
+              <label className="block text-sm mb-2">Password</label>
               <input
-                className={`w-full rounded-2xl px-4 py-3 bg-[#e8eefc] outline-none ring-0 border ${
+                className={`w-full rounded-2xl px-4 py-3 bg-[#f5f5f5] outline-none ring-0 border ${
                   touched.password && errors.password ? "border-rose-300" : "border-slate-300"
                 }`}
                 type="password"
@@ -96,7 +96,7 @@ export default function LoginForm() {
             </button>
 
             <div className="mt-6 text-center text-sm">
-              <Link to="/register" className="underline">sign up</Link>
+              <Link to="/register" className="underline">Sign up</Link>
             </div>
           </form>
         </div>
