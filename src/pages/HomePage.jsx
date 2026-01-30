@@ -1,31 +1,47 @@
-// src/pages/HomePage.jsx
-import { Link } from "react-router-dom";
+import heroVideo from "../assets/hero-bg.mp4";
 
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen w-screen bg-[#e4e1dc] overflow-hidden">
-      <header className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-6">
-          <div className="w-14 h-14 rounded-[12px] bg-[#eceae6]" />
-          <div className="hidden sm:flex items-center gap-6">
-            <span className="block h-[6px] w-24 rounded-full bg-white" />
-            <span className="block h-[6px] w-20 rounded-full bg-white" />
-            <span className="block h-[6px] w-20 rounded-full bg-white" />
-            <span className="block h-[6px] w-16 rounded-full bg-white" />
-          </div>
-        </div>
-        <Link
-          to="/login"
-          className="rounded-full bg-black/90 px-4 py-2 text-white text-sm shadow-lg hover:bg-black"
+    <>
+      {/* HERO */}
+      <section className="relative h-[80vh]">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
         >
-          Увійти / Зареєструватись
-        </Link>
-      </header>
+          <source src={heroVideo} type="video/mp4" />
+        </video>
 
-      <div className="absolute inset-x-0 bottom-16 flex flex-col items-center gap-5 px-6">
-        <div className="h-[8px] w-[60%] max-w-[900px] rounded-full bg-white" />
-        <div className="h-[8px] w-[40%] max-w-[600px] rounded-full bg-white" />
-      </div>
-    </div>
+        <div className="absolute inset-0 bg-[#0D3C6A]/70 flex items-center justify-center">
+          <h1 className="text-4xl md:text-5xl text-center max-w-3xl">
+            FinTech UniVerse — your gateway to financial knowledge
+          </h1>
+        </div>
+      </section>
+
+      {/* ТЕКСТОВИЙ БЛОК */}
+      <section className="bg-[#B05A6A] py-20 text-center px-6">
+        <p className="max-w-4xl mx-auto text-2xl">
+          We analyze the landscape of educational programs, track trends,
+          and curate high-value fintech content in one place.
+        </p>
+      </section>
+
+      {/* COURSES + INSIGHTS */}
+      <section className="grid md:grid-cols-2">
+        <div className="bg-[#B05A6A] p-20 text-center">
+          <h2 className="text-3xl mb-6">Top FinTech Courses</h2>
+          <p>Discover fintech courses in digital finance, blockchain, AI...</p>
+        </div>
+
+        <div className="bg-[#0D3C6A] p-20 text-center">
+          <h2 className="text-3xl mb-6">Latest Insights</h2>
+          <p>Global regulators announce new requirements for digital assets</p>
+        </div>
+      </section>
+    </>
   );
 }
