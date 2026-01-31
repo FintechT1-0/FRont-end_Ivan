@@ -1,6 +1,6 @@
 import client from "./client";
 
-export async function getCourses(params = {}) {
-  const { data } = await client.get("/courses", { params });
+export async function getCourses() {
+  const { data } = await client.get("/courses/");
   return data;
 }

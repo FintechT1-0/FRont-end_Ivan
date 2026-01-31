@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
 import HomePage from "./pages/HomePage";
 import CoursesPage from "./pages/CoursesPage";
@@ -10,14 +11,15 @@ import PartnersPage from "./pages/PartnersPage";
 
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-
 import UserCabinetPage from "./pages/UserCabinetPage";
+
 import AdminCabinetPage from "./pages/AdminCabinetPage";
+import AdminCoursesPage from "./pages/AdminCoursesPage";
+import AdminCourseEditorPage from "./pages/AdminCourseEditorPage";
 
 export default function App() {
   return (
     <Routes>
-      {/* Публічні сторінки з Header + Footer */}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
@@ -25,11 +27,9 @@ export default function App() {
         <Route path="/partners" element={<PartnersPage />} />
       </Route>
 
-      {/* Auth */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* User cabinet */}
       <Route
         path="/cabinet"
         element={
@@ -39,13 +39,28 @@ export default function App() {
         }
       />
 
-      {/* Admin cabinet */}
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requiredRole="admin">
+          <AdminRoute>
             <AdminCabinetPage />
-          </ProtectedRoute>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/courses"
+        element={
+          <AdminRoute>
+            <AdminCoursesPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/courses/:id"
+        element={
+          <AdminRoute>
+            <AdminCourseEditorPage />
+          </AdminRoute>
         }
       />
     </Routes>
