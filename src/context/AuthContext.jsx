@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
 
   async function loadMe() {
     const token = localStorage.getItem("token");
+
     if (!token) {
       setUser(null);
       setLoadingUser(false);
@@ -18,7 +19,7 @@ export function AuthProvider({ children }) {
     try {
       const data = await authApi.me();
       setUser(data);
-    } catch {
+    } catch (err) {
       localStorage.removeItem("token");
       setUser(null);
     } finally {
@@ -30,14 +31,18 @@ export function AuthProvider({ children }) {
     loadMe();
   }, []);
 
-  async function doLogin(email, password) {
+  async function login(email, password) {
     const data = await authApi.login({ email, password });
-    if (data?.token) localStorage.setItem("token", data.token);
+
+    if (data?.token) {
+      localStorage.setItem("token", data.token);
+    }
+
     await loadMe();
     return data;
   }
 
-  async function doRegister(payload) {
+  async function register(payload) {
     const data = await authApi.register(payload);
     return data;
   }
@@ -51,12 +56,10 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loadingUser,
-      reload: loadMe,
-      login: doLogin,
-      register: doRegister,
+      login,
+      register,
       logout,
-      isAdmin: user?.role === "ADMIN",
-      isAuthed: !!user,
+      reload: loadMe,
     }),
     [user, loadingUser]
   );

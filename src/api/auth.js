@@ -1,10 +1,17 @@
 import client from "./client";
 
-export async function register({ name, surname, email, password, admin_password }) {
-  const payload = { name, surname, email, password };
-  if (admin_password) payload.admin_password = admin_password;
+export async function checkEmail(email) {
+  const { data } = await client.post("/auth/checkEmail", { email });
+  return data;
+}
 
-  const { data } = await client.post("/auth/register", payload);
+export async function register({ name, surname, email, password }) {
+  const { data } = await client.post("/auth/register", {
+    name,
+    surname,
+    email,
+    password,
+  });
   return data;
 }
 

@@ -1,19 +1,17 @@
 export default function InsightsPage() {
   return (
-    <section className="min-h-[60vh] flex items-center justify-center px-6">
-      <div className="text-center max-w-2xl">
-        <h1 className="text-3xl md:text-4xl mb-6">
-          Latest Insights
+    <div className="min-h-[70vh] flex items-center justify-center bg-[#1E3A5F] text-white px-6">
+      <div className="max-w-xl text-center">
+        <h1 className="text-3xl font-semibold mb-4">
+          Insights are coming soon
         </h1>
 
-        <p className="text-lg opacity-80">
-          This section is currently under development.
-        </p>
-
-        <p className="mt-4 text-sm opacity-60">
-          We are working on analytics, market insights, and fintech news aggregation.
+        <p className="text-lg opacity-90">
+          This section is under active development.  
+          Soon you’ll find curated fintech news, regulatory updates,
+          and market insights here.
         </p>
       </div>
-    </section>
+    </div>
   );
 }
