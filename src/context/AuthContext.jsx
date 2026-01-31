@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
 
   async function loadMe() {
     const token = localStorage.getItem("token");
-
     if (!token) {
       setUser(null);
       setLoadingUser(false);
@@ -33,9 +32,16 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const data = await authApi.login({ email, password });
+
     if (data?.token) localStorage.setItem("token", data.token);
-    setUser(data?.user || null);
-    setLoadingUser(false);
+
+    if (data?.user) {
+      setUser(data.user);
+      setLoadingUser(false);
+      return data;
+    }
+
+    await loadMe();
     return data;
   }
 
@@ -50,14 +56,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({
-      user,
-      loadingUser,
-      login,
-      register,
-      logout,
-      reload: loadMe,
-    }),
+    () => ({ user, loadingUser, login, register, logout, reload: loadMe }),
     [user, loadingUser]
   );
 
