@@ -4,51 +4,61 @@ import * as authApi from "../api/auth";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [user, setUser] = useState(null); // можна заповнити пізніше, коли /me буде ок
-  const [loadingUser, setLoadingUser] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  const isAuthed = !!token;
-
-  useEffect(() => {
-    // якщо хочеш: тут можна потім підключити /me, але зараз не чіпаємо
-    // щоб не вилітало на 401 / PRO FEATURE ONLY
-  }, []);
-
-  async function login(identity, password) {
-    const data = await authApi.login({ identity, password });
-
-    if (data?.token) {
-      localStorage.setItem("token", data.token);
-      setToken(data.token);
+  async function loadMe() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUser(null);
+      setLoadingUser(false);
+      return;
     }
 
-    // якщо бекенд повертає user — можна setUser(data.user)
+    try {
+      const data = await authApi.me();
+      setUser(data);
+    } catch {
+      localStorage.removeItem("token");
+      setUser(null);
+    } finally {
+      setLoadingUser(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMe();
+  }, []);
+
+  async function doLogin(email, password) {
+    const data = await authApi.login({ email, password });
+    if (data?.token) localStorage.setItem("token", data.token);
+    await loadMe();
     return data;
   }
 
-  async function register(payload) {
-    return authApi.register(payload);
+  async function doRegister(payload) {
+    const data = await authApi.register(payload);
+    return data;
   }
 
   function logout() {
     localStorage.removeItem("token");
-    setToken(null);
     setUser(null);
   }
 
   const value = useMemo(
     () => ({
-      token,
-      user, // поки може бути null
+      user,
       loadingUser,
-      isAuthed,
-      login,
-      register,
+      reload: loadMe,
+      login: doLogin,
+      register: doRegister,
       logout,
-      setUser, // на майбутнє
+      isAdmin: user?.role === "ADMIN",
+      isAuthed: !!user,
     }),
-    [token, user, loadingUser, isAuthed]
+    [user, loadingUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
