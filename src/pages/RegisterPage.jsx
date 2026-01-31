@@ -1,122 +1,162 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import * as authApi from "../api/auth";
+import { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+function BackArrow() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M15 18l-6-6 6-6"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
+  const nav = useNavigate();
+  const location = useLocation();
+  const { register } = useAuth();
+
+  const from = useMemo(() => location.state?.from || "/", [location.state]);
 
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [ok, setOk] = useState(false);
+
+  function goBack() {
+    if (window.history.length > 1) nav(-1);
+    else nav(from);
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
-    setSubmitting(true);
+    setOk(false);
+
+    if (!name || !surname || !email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
 
     try {
-      await authApi.register({
-        name: name.trim(),
-        surname: surname.trim(),
-        email: email.trim(),
-        password,
-      });
-
-      // Після успішної реєстрації — на логін
-      navigate("/login");
+      setLoading(true);
+      await register({ name, surname, email, password });
+      setOk(true);
+      setTimeout(() => {
+        nav("/login", { replace: true, state: { from } });
+      }, 300);
     } catch (err) {
-      setError(err?.message || "Registration failed");
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data ||
+        err?.message ||
+        "Registration failed";
+      setError(typeof msg === "string" ? msg : "Registration failed");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0F3D6B] flex items-center justify-center px-4">
-      <div className="w-full max-w-lg bg-[#3E628A] rounded-2xl p-8 shadow-lg">
-        <h1 className="text-3xl font-semibold text-white text-center mb-8">
-          Sign Up
-        </h1>
+    <div className="min-h-screen bg-[#0D3C6A] text-white flex items-center justify-center px-6">
+      <div className="w-full max-w-[520px] relative">
+        <button
+          type="button"
+          onClick={goBack}
+          className="absolute -top-14 left-0 flex items-center gap-2 text-white/90 hover:text-white"
+          aria-label="Back"
+        >
+          <BackArrow />
+          <span className="text-sm">Back</span>
+        </button>
 
-        <form onSubmit={onSubmit} className="space-y-5">
-          <div>
-            <label className="block text-white/90 mb-2">First name</label>
-            <input
-              className="w-full h-12 rounded-xl px-4 outline-none"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ily"
-              autoComplete="given-name"
-              required
-            />
-            <p className="text-white/70 text-xs mt-1">
-              Must start with a capital letter.
-            </p>
-          </div>
+        <div className="rounded-[32px] bg-white/10 backdrop-blur-md border border-white/15 p-8 md:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+          <h1 className="text-2xl md:text-3xl font-semibold">Create account</h1>
+          <p className="mt-3 text-white/80">
+            Register to access your user cabinet and courses.
+          </p>
 
-          <div>
-            <label className="block text-white/90 mb-2">Last name</label>
-            <input
-              className="w-full h-12 rounded-xl px-4 outline-none"
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              placeholder="Vovk"
-              autoComplete="family-name"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-white/90 mb-2">E-mail</label>
-            <input
-              className="w-full h-12 rounded-xl px-4 outline-none"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@gmail.com"
-              autoComplete="email"
-              required
-              type="email"
-            />
-          </div>
-
-          <div>
-            <label className="block text-white/90 mb-2">Password</label>
-            <input
-              className="w-full h-12 rounded-xl px-4 outline-none"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min 8 characters"
-              autoComplete="new-password"
-              required
-              type="password"
-              minLength={8}
-            />
-          </div>
-
-          {error ? (
-            <div className="bg-[#BC0109] text-white px-4 py-3 rounded-xl">
-              {error}
+          <form onSubmit={onSubmit} className="mt-8 space-y-5">
+            <div>
+              <label className="block text-sm text-white/85 mb-2">Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full h-12 rounded-xl bg-white/15 border border-white/15 px-4 outline-none focus:border-white/35"
+                placeholder="Name"
+              />
             </div>
-          ) : null}
 
-          <button
-            disabled={submitting}
-            className="w-full h-12 rounded-xl bg-[#BC0109] text-white font-semibold disabled:opacity-60"
-            type="submit"
-          >
-            {submitting ? "Signing up..." : "Sign Up"}
-          </button>
+            <div>
+              <label className="block text-sm text-white/85 mb-2">Surname</label>
+              <input
+                value={surname}
+                onChange={(e) => setSurname(e.target.value)}
+                className="w-full h-12 rounded-xl bg-white/15 border border-white/15 px-4 outline-none focus:border-white/35"
+                placeholder="Surname"
+              />
+            </div>
 
-          <div className="text-center mt-2">
-            <Link className="text-white/90 underline" to="/login">
-              Sign in
-            </Link>
-          </div>
-        </form>
+            <div>
+              <label className="block text-sm text-white/85 mb-2">Email</label>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                className="w-full h-12 rounded-xl bg-white/15 border border-white/15 px-4 outline-none focus:border-white/35"
+                placeholder="user@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/85 mb-2">Password</label>
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                className="w-full h-12 rounded-xl bg-white/15 border border-white/15 px-4 outline-none focus:border-white/35"
+                placeholder="min 8 characters"
+              />
+            </div>
+
+            {error ? (
+              <div className="rounded-xl bg-red-500/15 border border-red-400/30 px-4 py-3 text-sm text-red-100">
+                {error}
+              </div>
+            ) : null}
+
+            {ok ? (
+              <div className="rounded-xl bg-green-500/15 border border-green-400/30 px-4 py-3 text-sm text-green-100">
+                Account created. Redirecting to login...
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-xl bg-[#B80A0A] hover:opacity-90 disabled:opacity-60 font-semibold"
+            >
+              {loading ? "Loading..." : "Create account"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => nav("/login", { state: { from } })}
+              className="w-full h-12 rounded-xl bg-white/15 hover:bg-white/20 border border-white/15"
+            >
+              I already have an account
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

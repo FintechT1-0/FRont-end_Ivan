@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
     try {
       const data = await authApi.me();
       setUser(data);
-    } catch (err) {
+    } catch (_) {
       localStorage.removeItem("token");
       setUser(null);
     } finally {
@@ -33,12 +33,9 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const data = await authApi.login({ email, password });
-
-    if (data?.token) {
-      localStorage.setItem("token", data.token);
-    }
-
-    await loadMe();
+    if (data?.token) localStorage.setItem("token", data.token);
+    setUser(data?.user || null);
+    setLoadingUser(false);
     return data;
   }
 

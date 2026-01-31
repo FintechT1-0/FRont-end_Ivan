@@ -5,13 +5,11 @@ export async function checkEmail(email) {
   return data;
 }
 
-export async function register({ name, surname, email, password }) {
-  const { data } = await client.post("/auth/register", {
-    name,
-    surname,
-    email,
-    password,
-  });
+export async function register({ name, surname, email, password, admin_password }) {
+  const payload = { name, surname, email, password };
+  if (admin_password) payload.admin_password = admin_password;
+
+  const { data } = await client.post("/auth/register", payload);
   return data;
 }
 
