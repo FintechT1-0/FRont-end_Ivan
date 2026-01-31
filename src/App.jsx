@@ -13,7 +13,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <Routes>
-      {/* Публічні сторінки з Header + Footer */}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
@@ -21,11 +20,9 @@ export default function App() {
         <Route path="/partners" element={<PartnersPage />} />
       </Route>
 
-      {/* Окремі сторінки */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Кабінет */}
       <Route
         path="/cabinet"
         element={
