@@ -13,8 +13,8 @@ export default function AdminLayout() {
      ${isActive ? "bg-white/20 text-white" : "text-white/80 hover:bg-white/10"}`;
 
   return (
-    <div className="min-h-screen flex bg-[#F5F6F8]">
-      {/* Sidebar */}
+    <div className="min-h-screen flex bg-slate-50">
+      {/* Sidebar (темний) */}
       <aside className="w-64 bg-[#1F3A5F] text-white flex flex-col">
         <div className="px-6 py-5 text-xl font-semibold border-b border-white/10">
           Admin Panel
@@ -41,16 +41,18 @@ export default function AdminLayout() {
         <div className="p-4 border-t border-white/10">
           <button
             onClick={logout}
-            className="w-full h-10 rounded-md bg-white/10 hover:bg-white/20 transition text-sm"
+            className="w-full h-10 rounded-md bg-white/10 hover:bg-white/20 transition text-sm text-white"
           >
             Вийти
           </button>
         </div>
       </aside>
 
-      {/* Content */}
-      <main className="flex-1 p-8">
-        <Outlet />
+      {/* Content (світлий, чорний текст) */}
+      <main className="flex-1 p-8 text-slate-900">
+        <div className="max-w-6xl">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

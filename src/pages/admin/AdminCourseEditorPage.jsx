@@ -5,6 +5,18 @@ import { useLang } from "../../context/LanguageContext";
 
 /* ---------------- helpers ---------------- */
 
+function tagsToString(tags) {
+  if (!Array.isArray(tags)) return "";
+  return tags.filter(Boolean).join(", ");
+}
+
+function stringToTags(str) {
+  return (str || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function normalizeCourse(data = {}) {
   return {
     title_ua: data.title_ua ?? "",
@@ -12,13 +24,38 @@ function normalizeCourse(data = {}) {
     description_ua: data.description_ua ?? "",
     description_en: data.description_en ?? "",
     category: data.category ?? "",
+    // API expects durationText
     durationText: data.durationText ?? "",
-    price: data.price ?? 0,
+    // API expects number
+    price: typeof data.price === "number" ? data.price : Number(data.price) || 0,
     image: data.image ?? "",
     link: data.link ?? data.url ?? "",
+    tags: Array.isArray(data.tags) ? data.tags : [],
+
+    // extra flags for your UI
     isPublished: Boolean(data.isPublished),
     isArchived: Boolean(data.isArchived),
   };
+}
+
+function validateCourseCreate(form, lang) {
+  const ua = lang === "ua";
+  const errors = [];
+
+  if (!form.title_ua?.trim()) errors.push(ua ? "Заповни Title (UA)." : "Fill Title (UA).");
+  if (!form.title_en?.trim()) errors.push(ua ? "Заповни Title (EN)." : "Fill Title (EN).");
+  if (!form.description_ua?.trim()) errors.push(ua ? "Заповни Description (UA)." : "Fill Description (UA).");
+  if (!form.description_en?.trim()) errors.push(ua ? "Заповни Description (EN)." : "Fill Description (EN).");
+  if (!form.category?.trim()) errors.push(ua ? "Заповни Category." : "Fill Category.");
+  if (!form.durationText?.trim()) errors.push(ua ? "Заповни Duration." : "Fill Duration.");
+  if (!Array.isArray(form.tags) || form.tags.length < 1)
+    errors.push(ua ? "Додай хоча б один tag." : "Add at least one tag.");
+
+  // price is required (>= 0)
+  const price = Number(form.price);
+  if (Number.isNaN(price) || price < 0) errors.push(ua ? "Price має бути >= 0." : "Price must be >= 0.");
+
+  return errors;
 }
 
 /* ---------------- page ---------------- */
@@ -33,19 +70,24 @@ export default function AdminCourseEditorPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(normalizeCourse());
 
-  const t = useMemo(
-    () => ({
-      title: isEdit ? "Edit course" : "Create course",
-      save: lang === "ua" ? "Зберегти" : "Save",
-      back: lang === "ua" ? "Назад" : "Back",
-      required: lang === "ua" ? "Обовʼязково" : "Required",
-      placeholder:
-        lang === "ua"
-          ? "Деякі поля можна заповнити пізніше у фінальній версії."
-          : "Some fields can be filled later in the final version.",
-    }),
-    [lang, isEdit]
-  );
+  // UI-only field for tags input
+  const [tagsText, setTagsText] = useState("");
+
+  const t = useMemo(() => {
+    const ua = lang === "ua";
+    return {
+      title: isEdit ? (ua ? "Редагувати курс" : "Edit course") : (ua ? "Створити курс" : "Create course"),
+      save: ua ? "Зберегти" : "Save",
+      back: ua ? "Назад" : "Back",
+      placeholder: ua
+        ? "Поля відповідають API бекенду. Мінімум: назви, описи, категорія, duration, tags, price."
+        : "Fields match backend API. Minimum: titles, descriptions, category, duration, tags, price.",
+      required: ua ? "Обов’язково" : "Required",
+      tagsHint: ua ? "Введи теги через кому. Напр: fintech, ai, regtech" : "Enter tags separated by commas. Ex: fintech, ai, regtech",
+      publish: ua ? "Опубліковано" : "Published",
+      archived: ua ? "В архіві" : "Archived",
+    };
+  }, [lang, isEdit]);
 
   useEffect(() => {
     let alive = true;
@@ -58,8 +100,13 @@ export default function AdminCourseEditorPage() {
 
       try {
         const data = await getCourse(id);
-        if (alive) setForm(normalizeCourse(data));
-      } catch {
+        if (!alive) return;
+
+        const normalized = normalizeCourse(data);
+        setForm(normalized);
+        setTagsText(tagsToString(normalized.tags));
+      } catch (e) {
+        console.error(e);
         alert("Failed to load course");
         navigate("/admin/courses", { replace: true });
       } finally {
@@ -73,110 +120,143 @@ export default function AdminCourseEditorPage() {
     };
   }, [id, isEdit, navigate]);
 
-  const set = (key, value) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const onSave = async (e) => {
     e.preventDefault();
 
-    if (!form.title_ua && !form.title_en) {
-      alert("Title is required");
+    const tags = stringToTags(tagsText);
+    const payload = {
+      ...form,
+      tags,
+      price: Number(form.price) || 0,
+    };
+
+    // ✅ create requires strict fields; edit can be partial, but we keep same validation to avoid API 422
+    const errors = validateCourseCreate(payload, lang);
+    if (errors.length) {
+      alert(errors.join("\n"));
       return;
     }
 
     setSaving(true);
     try {
-      const payload = { ...form, price: Number(form.price) || 0 };
-      isEdit
-        ? await updateCourse(id, payload)
-        : await createCourse(payload);
-
+      if (isEdit) {
+        await updateCourse(id, payload);
+      } else {
+        await createCourse(payload);
+      }
       navigate("/admin/courses", { replace: true });
-    } catch {
+    } catch (e2) {
+      console.error(e2);
       alert("Save failed");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="text-black/60">Loading…</div>;
+  if (loading) return <div className="text-slate-600">Loading…</div>;
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-medium">{t.title}</h1>
+    <div className="text-slate-900">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-semibold">{t.title}</h1>
+          <div className="mt-2 text-sm text-slate-500">{t.placeholder}</div>
+        </div>
+
         <button
+          type="button"
           onClick={() => navigate("/admin/courses")}
-          className="h-10 px-4 rounded-md border hover:bg-black/5"
+          className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
         >
           {t.back}
         </button>
       </div>
 
-      <div className="mt-3 text-sm text-black/60">{t.placeholder}</div>
-
-      <form
-        onSubmit={onSave}
-        className="mt-6 bg-white rounded-md border p-6 space-y-6"
-      >
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={onSave} className="mt-6 bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <InputField
-            label="Title (UA)"
+            label={`Title (UA) (${t.required})`}
             value={form.title_ua}
             onChange={(v) => set("title_ua", v)}
+            placeholder="Назва курсу українською"
           />
           <InputField
             label={`Title (EN) (${t.required})`}
             value={form.title_en}
             onChange={(v) => set("title_en", v)}
+            placeholder="Course title in English"
           />
+
           <InputField
-            label="Category"
+            label={`Category (${t.required})`}
             value={form.category}
             onChange={(v) => set("category", v)}
+            placeholder="regtech_suptech / ai_finance / ..."
           />
+
           <InputField
-            label="Duration"
+            label={`Duration (${t.required})`}
             value={form.durationText}
             onChange={(v) => set("durationText", v)}
+            placeholder='Напр. "20 годин (3 лекції, 2 практичні)"'
           />
+
           <InputField
             type="number"
-            label="Price"
-            value={form.price}
+            label={`Price (${t.required})`}
+            value={String(form.price)}
             onChange={(v) => set("price", v)}
+            placeholder="0"
           />
+
           <InputField
             label="Image URL"
             value={form.image}
             onChange={(v) => set("image", v)}
+            placeholder="https://..."
           />
+
           <InputField
             colSpan
             label="Original link"
             value={form.link}
             onChange={(v) => set("link", v)}
+            placeholder="https://..."
           />
+
+          <InputField
+            colSpan
+            label={`Tags (${t.required})`}
+            value={tagsText}
+            onChange={(v) => setTagsText(v)}
+            placeholder={t.tagsHint}
+          />
+
           <TextareaField
-            label="Description (UA)"
+            label={`Description (UA) (${t.required})`}
             value={form.description_ua}
             onChange={(v) => set("description_ua", v)}
+            placeholder="Опис українською"
           />
+
           <TextareaField
-            label="Description (EN)"
+            label={`Description (EN) (${t.required})`}
             value={form.description_en}
             onChange={(v) => set("description_en", v)}
+            placeholder="Description in English"
           />
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex flex-wrap gap-6">
           <Checkbox
-            label="Published"
+            label={t.publish}
             checked={form.isPublished}
             onChange={(v) => set("isPublished", v)}
           />
           <Checkbox
-            label="Archived"
+            label={t.archived}
             checked={form.isArchived}
             onChange={(v) => set("isArchived", v)}
           />
@@ -186,7 +266,7 @@ export default function AdminCourseEditorPage() {
           <button
             type="submit"
             disabled={saving}
-            className="h-11 px-6 rounded-md bg-[#2E5D8C] text-white disabled:opacity-60"
+            className="h-11 px-6 rounded-lg bg-[#2E5D8C] text-white font-medium hover:opacity-95 disabled:opacity-60"
           >
             {saving ? "Saving…" : t.save}
           </button>
@@ -195,29 +275,33 @@ export default function AdminCourseEditorPage() {
     </div>
   );
 }
+
 /* ---------------- UI components ---------------- */
-function InputField({ label, value, onChange, type = "text", colSpan }) {
+
+function InputField({ label, value, onChange, type = "text", colSpan, placeholder }) {
   return (
-    <div className={colSpan ? "col-span-2" : ""}>
-      <div className="text-sm font-medium">{label}</div>
+    <div className={colSpan ? "md:col-span-2" : ""}>
+      <div className="text-sm font-medium text-slate-900">{label}</div>
       <input
         type={type}
-        value={value}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full h-10 rounded-md border px-3"
+        placeholder={placeholder}
+        className="mt-2 w-full h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#2E5D8C]/20"
       />
     </div>
   );
 }
 
-function TextareaField({ label, value, onChange }) {
+function TextareaField({ label, value, onChange, placeholder }) {
   return (
-    <div className="col-span-2">
-      <div className="text-sm font-medium">{label}</div>
+    <div className="md:col-span-2">
+      <div className="text-sm font-medium text-slate-900">{label}</div>
       <textarea
-        value={value}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full min-h-[120px] rounded-md border px-3 py-2"
+        placeholder={placeholder}
+        className="mt-2 w-full min-h-[140px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#2E5D8C]/20"
       />
     </div>
   );
@@ -225,10 +309,10 @@ function TextareaField({ label, value, onChange }) {
 
 function Checkbox({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2">
+    <label className="flex items-center gap-2 text-sm text-slate-800">
       <input
         type="checkbox"
-        checked={checked}
+        checked={Boolean(checked)}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span>{label}</span>
