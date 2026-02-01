@@ -1,129 +1,120 @@
 import { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useLang } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 
-function BackArrow() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M15 18l-6-6 6-6"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export default function LoginPage() {
-  const nav = useNavigate();
-  const location = useLocation();
+  const { lang } = useLang();
   const { login } = useAuth();
-
-  const from = useMemo(() => location.state?.from || "/", [location.state]);
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [err, setErr] = useState("");
 
-  function goBack() {
-    nav(from, { replace: true });
+  const t = useMemo(() => ({
+    title: lang === "en" ? "Sign In" : "Вхід",
+    email: "E-mail",
+    password: lang === "en" ? "Password" : "Пароль",
+    btn: lang === "en" ? "Sign In" : "Увійти",
+    signup: lang === "en" ? "Create account" : "Зареєструватися",
+    admin: lang === "en" ? "For admin" : "Для адміна",
+    back: lang === "en" ? "Back" : "Назад",
+    invalid: lang === "en"
+      ? "Invalid email or password."
+      : "Невірний e-mail або пароль.",
+  }), [lang]);
+
+  function handleBack() {
+    const nextRaw = params.get("next");
+    if (nextRaw) {
+      navigate(decodeURIComponent(nextRaw));
+    } else {
+      navigate("/", { replace: true });
+    }
   }
 
   async function onSubmit(e) {
     e.preventDefault();
-    setError("");
-
-    if (!email || !password) {
-      setError("Please fill in email and password");
-      return;
-    }
-
+    setErr("");
+    setLoading(true);
     try {
-      setLoading(true);
-      await login(email, password);
-      nav("/cabinet", { replace: true });
-    } catch (err) {
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data ||
-        err?.message ||
-        "Login failed";
-      setError(typeof msg === "string" ? msg : "Login failed");
+      const data = await login({ email, password });
+
+      const nextRaw = params.get("next");
+      const next = nextRaw ? decodeURIComponent(nextRaw) : null;
+
+      if (next) {
+        navigate(next, { replace: true });
+        return;
+      }
+
+      if (data?.user?.role === "admin") navigate("/admin", { replace: true });
+      else navigate("/cabinet", { replace: true });
+    } catch {
+      setErr(t.invalid);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0D3C6A] text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-[520px] relative">
+    <div className="min-h-[90vh] bg-[#0E3A73] text-white flex items-center justify-center px-6">
+      <div className="w-full max-w-md bg-white/10 rounded-3xl p-8 relative">
+
+        {/* BACK / CLOSE */}
         <button
-          type="button"
-          onClick={goBack}
-          className="absolute -top-14 left-0 flex items-center gap-2 text-white/90 hover:text-white"
-          aria-label="Back"
+          onClick={handleBack}
+          className="absolute top-4 right-4 text-xl opacity-80 hover:opacity-100"
+          title={t.back}
         >
-          <BackArrow />
-          <span className="text-sm">Back</span>
+          ✕
         </button>
 
-        <div className="rounded-[32px] bg-white/10 backdrop-blur-md border border-white/15 p-8 md:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-          <h1 className="text-2xl md:text-3xl font-semibold">Login</h1>
-          <p className="mt-3 text-white/80">
-            Enter your account credentials to access your cabinet.
-          </p>
+        <h1 className="text-3xl font-semibold">{t.title}</h1>
 
-          <form onSubmit={onSubmit} className="mt-8 space-y-5">
-            <div>
-              <label className="block text-sm text-white/85 mb-2">Email</label>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                className="w-full h-12 rounded-xl bg-white/15 border border-white/15 px-4 outline-none focus:border-white/35"
-                placeholder="user@example.com"
-                autoComplete="email"
-              />
-            </div>
+        {err && (
+          <div className="mt-4 bg-red-500/15 border border-red-400/30 rounded-xl p-3 text-sm">
+            {err}
+          </div>
+        )}
 
-            <div>
-              <label className="block text-sm text-white/85 mb-2">Password</label>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                className="w-full h-12 rounded-xl bg-white/15 border border-white/15 px-4 outline-none focus:border-white/35"
-                placeholder="********"
-                autoComplete="current-password"
-              />
-            </div>
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          <input
+            className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
+            placeholder={t.email}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            required
+          />
+          <input
+            className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
+            placeholder={t.password}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            required
+          />
 
-            {error ? (
-              <div className="rounded-xl bg-red-500/15 border border-red-400/30 px-4 py-3 text-sm text-red-100">
-                {error}
-              </div>
-            ) : null}
+          <button
+            disabled={loading}
+            className="w-full h-11 rounded-xl bg-[#A94F5E] hover:opacity-90 disabled:opacity-60 transition"
+            type="submit"
+          >
+            {t.btn}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 rounded-xl bg-[#B80A0A] hover:opacity-90 disabled:opacity-60 font-semibold"
-            >
-              {loading ? "Loading..." : "Login"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => nav("/register", { state: { from } })}
-              className="w-full h-12 rounded-xl bg-white/15 hover:bg-white/20 border border-white/15"
-            >
-              Create account
-            </button>
-          </form>
+        <div className="mt-6 flex items-center justify-between text-sm text-white/85">
+          <Link to="/register" className="underline">
+            {t.signup}
+          </Link>
+          <Link to="/admin-auth" className="underline">
+            {t.admin}
+          </Link>
         </div>
       </div>
     </div>

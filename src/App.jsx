@@ -11,6 +11,7 @@ import PartnersPage from "./pages/PartnersPage";
 
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import AdminAuthPage from "./pages/AdminAuthPage";
 
 import UserCabinetPage from "./pages/UserCabinetPage";
 import AdminCabinetPage from "./pages/AdminCabinetPage";
@@ -42,6 +43,12 @@ const AUTH_ROUTES = [
   },
 ];
 
+const OUTSIDE_LAYOUT_ROUTES = [
+  { path: "/login", element: <LoginPage /> },
+  { path: "/register", element: <RegisterPage /> },
+  { path: "/admin-auth", element: <AdminAuthPage /> },
+];
+
 export default function App() {
   return (
     <Routes>
@@ -55,8 +62,9 @@ export default function App() {
         ))}
       </Route>
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      {OUTSIDE_LAYOUT_ROUTES.map((r) => (
+        <Route key={r.path} path={r.path} element={r.element} />
+      ))}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
