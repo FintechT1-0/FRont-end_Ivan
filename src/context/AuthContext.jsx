@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import * as authApi from "../api/auth";
+// src/context/AuthContext.jsx
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { login as apiLogin, register as apiRegister, me as apiMe } from "../api/auth";
 
 const AuthContext = createContext(null);
 
@@ -7,7 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  async function loadMe() {
+  const loadMe = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       setUser(null);
@@ -15,48 +16,62 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    setLoadingUser(true);
     try {
-      const data = await authApi.me();
-      setUser(data);
-    } catch (_) {
+      const u = await apiMe();
+      setUser(u);
+    } catch (err) {
+      // Якщо токен протух/невалідний — очищаємо
       localStorage.removeItem("token");
       setUser(null);
     } finally {
       setLoadingUser(false);
     }
-  }
+  };
 
   useEffect(() => {
     loadMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function login(email, password) {
-    const data = await authApi.login({ email, password });
+  const login = async ({ identity, email, password }) => {
+    // Підтримка двох форматів:
+    // 1) login({ identity, password }) - як у вашому api/auth.js
+    // 2) login({ email, password }) - якщо десь так викликають
+    const payload = identity ? { identity, password } : { identity: email, password };
 
-    if (data?.token) localStorage.setItem("token", data.token);
-
-    if (data?.user) {
-      setUser(data.user);
-      setLoadingUser(false);
-      return data;
-    }
-
-    await loadMe();
+    const data = await apiLogin(payload);
+    // backend повертає { token, user }
+    localStorage.setItem("token", data.token);
+    setUser(data.user);
     return data;
-  }
+  };
 
-  async function register(payload) {
-    const data = await authApi.register(payload);
-    return data;
-  }
+  const register = async (payload) => {
+    // backend повертає UserInfo
+    const createdUser = await apiRegister(payload);
+    return createdUser;
+  };
 
-  function logout() {
+  const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
-  }
+  };
+
+  const isAuthed = !!user;
+  const isAdmin = user?.role === "admin";
 
   const value = useMemo(
-    () => ({ user, loadingUser, login, register, logout, reload: loadMe }),
+    () => ({
+      user,
+      loadingUser,
+      isAuthed,
+      isAdmin,
+      login,
+      register,
+      logout,
+      reload: loadMe,
+    }),
     [user, loadingUser]
   );
 
