@@ -8,10 +8,40 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
-  useEffect(() => {
-    if (token) localStorage.setItem("token", token);
+  const setAuthToken = (t) => {
+    const val = t || "";
+    setToken(val);
+    if (val) localStorage.setItem("token", val);
     else localStorage.removeItem("token");
-  }, [token]);
+  };
+
+  const logout = () => {
+    setAuthToken("");
+    setUser(null);
+  };
+
+  const refreshMe = async () => {
+    const t = localStorage.getItem("token");
+    if (!t) return null;
+
+    const { data } = await client.get("/auth/me");
+    setUser(data || null);
+    return data || null;
+  };
+
+  const login = async ({ email, password }) => {
+    const { data } = await client.post("/auth/login", { email, password });
+    setAuthToken(data?.token);
+    setUser(data?.user || null);
+    return data;
+  };
+
+  const register = async (payload) => {
+    const { data } = await client.post("/auth/register", payload);
+    if (data?.token) setAuthToken(data.token);
+    if (data?.user) setUser(data.user);
+    return data;
+  };
 
   useEffect(() => {
     let alive = true;
@@ -19,23 +49,19 @@ export function AuthProvider({ children }) {
     async function init() {
       setInitializing(true);
 
-      if (!token) {
-        if (!alive) return;
-        setUser(null);
-        setInitializing(false);
-        return;
-      }
-
       try {
-        const { data } = await client.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (!token) {
+          if (alive) setUser(null);
+          return;
+        }
+
+        const { data } = await client.get("/auth/me");
         if (!alive) return;
+
         setUser(data || null);
       } catch {
         if (!alive) return;
-        setToken("");
-        setUser(null);
+        logout();
       } finally {
         if (!alive) return;
         setInitializing(false);
@@ -46,24 +72,8 @@ export function AuthProvider({ children }) {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  async function login({ email, password }) {
-    const { data } = await client.post("/auth/login", { email, password });
-    setToken(data?.token || "");
-    setUser(data?.user || null);
-    return data;
-  }
-
-  async function register(payload) {
-    const { data } = await client.post("/auth/register", payload);
-    return data;
-  }
-
-  function logout() {
-    setToken("");
-    setUser(null);
-  }
 
   const value = useMemo(
     () => ({
@@ -74,6 +84,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      refreshMe,
     }),
     [token, user, initializing]
   );

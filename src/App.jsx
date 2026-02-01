@@ -3,69 +3,79 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// public pages
 import HomePage from "./pages/HomePage";
 import CoursesPage from "./pages/CoursesPage";
 import InsightsPage from "./pages/InsightsPage";
 import InsightDetailsPage from "./pages/InsightDetailsPage";
 import PartnersPage from "./pages/PartnersPage";
 
+// auth pages
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminAuthPage from "./pages/AdminAuthPage";
 
+// user cabinet
+import UserLayout from "./components/UserLayout";
 import UserCabinetPage from "./pages/UserCabinetPage";
-import AdminCabinetPage from "./pages/AdminCabinetPage";
 
-const PUBLIC_ROUTES = [
-  { path: "/", element: <HomePage /> },
-  { path: "/courses", element: <CoursesPage /> },
-  { path: "/insights", element: <InsightsPage /> },
-  { path: "/insights/view", element: <InsightDetailsPage /> },
-  { path: "/partners", element: <PartnersPage /> },
-];
-
-const AUTH_ROUTES = [
-  {
-    path: "/cabinet",
-    element: (
-      <ProtectedRoute>
-        <UserCabinetPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRoute role="admin">
-        <AdminCabinetPage />
-      </ProtectedRoute>
-    ),
-  },
-];
-
-const OUTSIDE_LAYOUT_ROUTES = [
-  { path: "/login", element: <LoginPage /> },
-  { path: "/register", element: <RegisterPage /> },
-  { path: "/admin-auth", element: <AdminAuthPage /> },
-];
+// admin cabinet
+import AdminLayout from "./components/AdminLayout";
+import AdminCabinetPage from "./pages/admin/AdminCabinetPage";
+import AdminCoursesPage from "./pages/admin/AdminCoursesPage";
+import AdminCourseEditorPage from "./pages/admin/AdminCourseEditorPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminActivityPage from "./pages/admin/AdminActivityPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 
 export default function App() {
   return (
     <Routes>
+      {/* PUBLIC + BASE LAYOUT */}
       <Route element={<Layout />}>
-        {PUBLIC_ROUTES.map((r) => (
-          <Route key={r.path} path={r.path} element={r.element} />
-        ))}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
+        <Route path="/insights/view" element={<InsightDetailsPage />} />
+        <Route path="/partners" element={<PartnersPage />} />
 
-        {AUTH_ROUTES.map((r) => (
-          <Route key={r.path} path={r.path} element={r.element} />
-        ))}
+        {/* USER CABINET */}
+        <Route
+          path="/cabinet"
+          element={
+            <ProtectedRoute role="user">
+              <UserLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<UserCabinetPage />} />
+        </Route>
+
+        {/* ADMIN CABINET */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminCabinetPage />} />
+          <Route path="courses" element={<AdminCoursesPage />} />
+          <Route path="courses/new" element={<AdminCourseEditorPage />} />
+          <Route path="courses/:id" element={<AdminCourseEditorPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="activity" element={<AdminActivityPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+        </Route>
       </Route>
 
-      {OUTSIDE_LAYOUT_ROUTES.map((r) => (
-        <Route key={r.path} path={r.path} element={r.element} />
-      ))}
+      {/* AUTH (OUTSIDE LAYOUT) */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/admin-auth" element={<AdminAuthPage />} />
 
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

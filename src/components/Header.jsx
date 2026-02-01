@@ -1,15 +1,36 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../assets/Logo.png";
 import { useLang } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Header() {
   const { lang, toggleLang } = useLang();
+  const { user, token, initializing, refreshMe } = useAuth();
+  const navigate = useNavigate();
 
   const nav = {
     main: { en: "Main", ua: "Головна" },
     courses: { en: "Courses", ua: "Курси" },
     insights: { en: "Insights", ua: "Інсайди" },
     partners: { en: "Partners", ua: "Партнери" },
+  };
+
+  const goCabinet = async () => {
+    if (initializing) return;
+
+    let u = user;
+
+    if (!u && token) {
+      try {
+        u = await refreshMe();
+      } catch {
+        u = null;
+      }
+    }
+
+    if (!u) return navigate("/login?next=%2Fcabinet");
+    if (u.role === "admin") return navigate("/admin");
+    return navigate("/cabinet");
   };
 
   return (
@@ -25,18 +46,23 @@ export default function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
-          {/* language switch */}
           <button
             onClick={toggleLang}
-            className="px-3 py-1 rounded-md bg-white/15 hover:bg-white/25 text-sm text-white"
+            className="px-3 py-1 rounded-md bg-white/15 hover:bg-white/25 text-sm text-white transition"
+            type="button"
           >
             {lang === "en" ? "UA" : "EN"}
           </button>
 
-          {/* profile */}
-          <NavLink to="/login" className="text-white text-lg">
+          <button
+            onClick={goCabinet}
+            className="px-3 py-2 rounded-md bg-white/15 hover:bg-white/25 transition text-white"
+            type="button"
+            aria-label="User"
+            title="Cabinet"
+          >
             👤
-          </NavLink>
+          </button>
         </div>
       </div>
     </header>
