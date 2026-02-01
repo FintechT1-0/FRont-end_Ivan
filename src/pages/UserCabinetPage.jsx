@@ -1,7 +1,7 @@
+// src/pages/UserCabinetPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import client from "../api/client";
-import { useAuth } from "../context/AuthContext";
+import publicClient from "../api/publicClient";
 import { useLang } from "../context/LanguageContext";
 
 function Tile({ label, children, className = "" }) {
@@ -21,9 +21,30 @@ function pickImage(item) {
   return item?.image || item?.thumbnail || null;
 }
 
+function courseTitle(course, lang) {
+  if (!course) return "";
+  return lang === "en"
+    ? course?.title_en || course?.title || ""
+    : course?.title_ua || course?.title || "";
+}
+
+function courseDesc(course, lang) {
+  if (!course) return "";
+  return lang === "en"
+    ? course?.description_en || course?.description || ""
+    : course?.description_ua || course?.description || "";
+}
+
+function safeCoursesArray(data) {
+  if (Array.isArray(data?.courses)) return data.courses;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
 export default function UserCabinetPage() {
   const navigate = useNavigate();
-  const { token } = useAuth();
   const { lang } = useLang();
 
   const [latestCourse, setLatestCourse] = useState(null);
@@ -34,12 +55,14 @@ export default function UserCabinetPage() {
     const ua = lang !== "en";
     return {
       progress: ua ? "Прогрес навчання" : "Learning progress",
-      recommended: ua ? "Рекомендований курс" : "Recommended course",
+      recommended: ua ? "Найновіший курс" : "Newest course",
       lastVisited: ua ? "Останній відвідуваний курс" : "Last visited course",
       latestInsight: ua ? "Найновіший інсайт" : "Latest insight",
       emptyCourse: ua ? "Поки що немає курсів" : "No courses yet",
       emptyInsight: ua ? "Поки що немає інсайтів" : "No insights yet",
       view: ua ? "Переглянути" : "View",
+      openCourses: ua ? "Усі курси" : "All courses",
+      openInsights: ua ? "Усі інсайди" : "All insights",
       read: ua ? "Читати" : "Read",
       progressText: ua
         ? "Прогрес буде доступний у фінальній версії продукту."
@@ -48,55 +71,64 @@ export default function UserCabinetPage() {
   }, [lang]);
 
   useEffect(() => {
-    if (!token) return;
-
-    const headers = { Authorization: `Bearer ${token}` };
+    let alive = true;
 
     async function load() {
+      // COURSES
       try {
-        const res = await client.get("/courses/", {
-          headers,
+        const res = await publicClient.get("/courses", {
           params: { page: 1, page_size: 20, isPublished: true },
         });
-        const list = res?.data?.courses || [];
-        const newest = list[0] || null;
-        setLatestCourse(newest);
 
-        const lastId = Number(localStorage.getItem("lastCourseId") || "");
+        if (!alive) return;
+        const list = safeCoursesArray(res?.data);
+        setLatestCourse(list[0] || null);
+
+        const lastIdRaw = localStorage.getItem("lastCourseId");
+        const lastId = lastIdRaw ? Number(lastIdRaw) : null;
+
         if (lastId) {
           try {
-            const one = await client.get(`/courses/${lastId}`, { headers });
+            const one = await publicClient.get(`/courses/${lastId}`);
+            if (!alive) return;
             setLastVisitedCourse(one?.data || null);
           } catch {
+            if (!alive) return;
             setLastVisitedCourse(null);
           }
         } else {
           setLastVisitedCourse(null);
         }
       } catch {
+        if (!alive) return;
         setLatestCourse(null);
         setLastVisitedCourse(null);
       }
 
+      // INSIGHTS
       try {
         const endpoint = lang === "en" ? "/insights/en" : "/insights/ua";
-        const res = await client.get(endpoint, { headers });
-        const list = res?.data || [];
+        const res = await publicClient.get(endpoint);
+        if (!alive) return;
+
+        const list = Array.isArray(res?.data) ? res.data : res?.data?.items || [];
         setLatestInsight(list?.[0] || null);
       } catch {
+        if (!alive) return;
         setLatestInsight(null);
       }
     }
 
     load();
-  }, [token, lang]);
-
-  const courseTitle = (c) => (lang === "en" ? c?.title_en : c?.title_ua);
-  const courseDesc = (c) => (lang === "en" ? c?.description_en : c?.description_ua);
+    return () => {
+      alive = false;
+    };
+  }, [lang]);
 
   const openCourse = (c) => {
     if (!c?.id) return;
     localStorage.setItem("lastCourseId", String(c.id));
+    // якщо у тебе немає /courses/:id, то заміни на navigate("/cabinet/courses")
     navigate(`/courses/${c.id}`);
   };
 
@@ -119,16 +151,22 @@ export default function UserCabinetPage() {
           {latestCourse ? (
             <div className="h-full flex flex-col">
               <div className="text-xl font-semibold line-clamp-2">
-                {courseTitle(latestCourse)}
-              </div>
-              <div className="mt-3 text-white/80 text-sm leading-relaxed line-clamp-4">
-                {courseDesc(latestCourse)}
+                {courseTitle(latestCourse, lang)}
               </div>
 
-              <div className="mt-auto pt-6 flex items-center justify-between">
-                <div className="text-white/80 text-sm">
-                  {latestCourse.durationText || ""}
-                </div>
+              <div className="mt-3 text-white/80 text-sm leading-relaxed line-clamp-4">
+                {courseDesc(latestCourse, lang)}
+              </div>
+
+              <div className="mt-auto pt-6 flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => navigate("/cabinet/courses")}
+                  className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
+                >
+                  {t.openCourses}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => openCourse(latestCourse)}
@@ -139,7 +177,18 @@ export default function UserCabinetPage() {
               </div>
             </div>
           ) : (
-            <div className="text-white/70">{t.emptyCourse}</div>
+            <div className="h-full flex flex-col">
+              <div className="text-white/70">{t.emptyCourse}</div>
+              <div className="mt-auto pt-6">
+                <button
+                  type="button"
+                  onClick={() => navigate("/cabinet/courses")}
+                  className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
+                >
+                  {t.openCourses}
+                </button>
+              </div>
+            </div>
           )}
         </Tile>
 
@@ -148,12 +197,13 @@ export default function UserCabinetPage() {
             {lastVisitedCourse ? (
               <div className="h-full flex flex-col">
                 <div className="text-lg font-semibold line-clamp-2">
-                  {courseTitle(lastVisitedCourse)}
+                  {courseTitle(lastVisitedCourse, lang)}
                 </div>
                 <div className="mt-3 text-white/80 text-sm line-clamp-3">
-                  {courseDesc(lastVisitedCourse)}
+                  {courseDesc(lastVisitedCourse, lang)}
                 </div>
-                <div className="mt-auto pt-6">
+
+                <div className="mt-auto pt-6 flex justify-end">
                   <button
                     type="button"
                     onClick={() => openCourse(lastVisitedCourse)}
@@ -164,7 +214,18 @@ export default function UserCabinetPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-white/70">{t.emptyCourse}</div>
+              <div className="h-full flex flex-col">
+                <div className="text-white/70">{t.emptyCourse}</div>
+                <div className="mt-auto pt-6 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/cabinet/courses")}
+                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
+                  >
+                    {t.openCourses}
+                  </button>
+                </div>
+              </div>
             )}
           </Tile>
 
@@ -175,7 +236,7 @@ export default function UserCabinetPage() {
                   <div className="bg-white rounded-[24px] h-[120px] overflow-hidden">
                     <img
                       src={pickImage(latestInsight)}
-                      alt={latestInsight.title}
+                      alt={latestInsight.title || "Insight"}
                       className="w-full h-full object-cover"
                       loading="lazy"
                       referrerPolicy="no-referrer"
@@ -187,10 +248,18 @@ export default function UserCabinetPage() {
                 ) : null}
 
                 <div className="mt-4 text-base font-semibold line-clamp-2">
-                  {latestInsight.title}
+                  {latestInsight.title || ""}
                 </div>
 
-                <div className="mt-auto pt-6">
+                <div className="mt-auto pt-6 flex items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/cabinet/insights")}
+                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
+                  >
+                    {t.openInsights}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => openInsight(latestInsight)}
@@ -201,7 +270,18 @@ export default function UserCabinetPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-white/70">{t.emptyInsight}</div>
+              <div className="h-full flex flex-col">
+                <div className="text-white/70">{t.emptyInsight}</div>
+                <div className="mt-auto pt-6">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/cabinet/insights")}
+                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
+                  >
+                    {t.openInsights}
+                  </button>
+                </div>
+              </div>
             )}
           </Tile>
         </div>

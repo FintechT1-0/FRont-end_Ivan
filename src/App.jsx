@@ -15,11 +15,13 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminAuthPage from "./pages/AdminAuthPage";
 
-// user cabinet
+// user
 import UserLayout from "./components/UserLayout";
 import UserCabinetPage from "./pages/UserCabinetPage";
+import UserCoursesPage from "./pages/UserCoursesPage";
+import UserInsightsPage from "./pages/UserInsightsPage";
 
-// admin cabinet
+// admin
 import AdminLayout from "./components/AdminLayout";
 import AdminCabinetPage from "./pages/admin/AdminCabinetPage";
 import AdminCoursesPage from "./pages/admin/AdminCoursesPage";
@@ -31,15 +33,16 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 export default function App() {
   return (
     <Routes>
-      {/* PUBLIC + BASE LAYOUT */}
+      {/* ===== PUBLIC LAYOUT ===== */}
       <Route element={<Layout />}>
+        {/* public */}
         <Route path="/" element={<HomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/insights/view" element={<InsightDetailsPage />} />
         <Route path="/partners" element={<PartnersPage />} />
 
-        {/* USER CABINET */}
+        {/* ===== USER CABINET ===== */}
         <Route
           path="/cabinet"
           element={
@@ -49,9 +52,11 @@ export default function App() {
           }
         >
           <Route index element={<UserCabinetPage />} />
+          <Route path="courses" element={<UserCoursesPage />} />
+          <Route path="insights" element={<UserInsightsPage />} />
         </Route>
 
-        {/* ADMIN CABINET */}
+        {/* ===== ADMIN PANEL ===== */}
         <Route
           path="/admin"
           element={
@@ -62,7 +67,7 @@ export default function App() {
         >
           <Route index element={<AdminCabinetPage />} />
           <Route path="courses" element={<AdminCoursesPage />} />
-          <Route path="courses/new" element={<AdminCourseEditorPage />} />
+          <Route path="courses/create" element={<AdminCourseEditorPage />} />
           <Route path="courses/:id" element={<AdminCourseEditorPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="activity" element={<AdminActivityPage />} />
@@ -70,12 +75,12 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* AUTH (OUTSIDE LAYOUT) */}
+      {/* ===== AUTH WITHOUT LAYOUT ===== */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/admin-auth" element={<AdminAuthPage />} />
 
-      {/* FALLBACK */}
+      {/* ===== FALLBACK ===== */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
