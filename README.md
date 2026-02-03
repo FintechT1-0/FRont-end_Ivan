@@ -1,21 +1,20 @@
-# FinTech UniVerse — Frontend
+FinTech UniVerse — Frontend
 
-Frontend частина платформи **FinTech UniVerse** — фінтех-освітнього агрегатора курсів, інсайтів та партнерського контенту.
+Frontend частина платформи FinTech UniVerse — фінтех-освітнього агрегатора курсів, інсайтів та партнерського контенту.
 
 🌐 Live: https://www.fintecheducation.online/
 
----
+⸻
 
-## Tech Stack
+Tech Stack
+	•	React (Vite)
+	•	React Router v6
+	•	Axios
+	•	Tailwind CSS
 
-- React (Vite)
-- React Router v6
-- Axios
-- Tailwind CSS
+⸻
 
----
-
-## Project Structure
+Project Structure
 
 src/
 ├── api/                # API layer (axios clients, endpoints)
@@ -30,7 +29,7 @@ src/
 │   ├── Footer.jsx
 │   ├── ProtectedRoute.jsx
 │   ├── DesktopOnly.jsx
-│   └── …
+│   └── ...
 ├── context/            # Global state (auth, language)
 │   ├── AuthContext.jsx
 │   └── LanguageContext.jsx
@@ -48,14 +47,15 @@ src/
 ├── App.jsx
 └── main.jsx
 
----
 
-## Environment
+⸻
 
-API base URL налаштовується через env:
+Environment
 
-**.env.development**
-```env
+API base URL налаштовується через env-файли.
+
+.env.development
+
 VITE_API_BASE_URL=http://127.0.0.1:8000
 
 .env.production
@@ -94,21 +94,21 @@ Auth Flow
 	•	Token зберігається в localStorage
 	•	/auth/me → ініціалізація користувача
 	•	Автоматичний redirect у /cabinet після логіну
-	•	Role-based access (user / admin)
+	•	Role-based access: user / admin
 
 ⸻
 
 Layout & UX Notes
 	•	Єдиний BrowserRouter (main.jsx)
 	•	Global layout: Header + Footer
-	•	Admin / User areas мають власні layouts
+	•	Admin та User зони мають окремі layouts
 	•	Mobile версія тимчасово не підтримується
-	•	Для mobile / tablet показується DesktopOnly заглушка
-	•	Courses:
+	•	Для mobile / tablet відображається DesktopOnly заглушка
+	•	Courses
 	•	Public: тільки published
 	•	Admin: повний CRUD
-	•	Insights:
-	•	На Home — latest only
+	•	Insights
+	•	На Home — тільки latest
 	•	Повна персоналізація планується пізніше
 
 ⸻
