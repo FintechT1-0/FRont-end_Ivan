@@ -17,15 +17,17 @@ export default function RegisterPage() {
   const [err, setErr] = useState("");
 
   const t = useMemo(() => {
+    const en = lang === "en";
     return {
-      title: lang === "en" ? "Sign Up" : "Реєстрація",
-      name: lang === "en" ? "Name" : "Ім’я",
-      surname: lang === "en" ? "Surname" : "Прізвище",
-      email: lang === "en" ? "E-mail" : "E-mail",
-      password: lang === "en" ? "Password" : "Пароль",
-      btn: lang === "en" ? "Create account" : "Створити акаунт",
-      signin: lang === "en" ? "Already have an account? Sign In" : "Вже є акаунт? Увійти",
-      emailUsed: lang === "en" ? "This email is already in use." : "Ця пошта вже використовується.",
+      title: en ? "Sign Up" : "Реєстрація",
+      name: en ? "Name" : "Ім’я",
+      surname: en ? "Surname" : "Прізвище",
+      email: "E-mail",
+      password: en ? "Password" : "Пароль",
+      btn: en ? "Create account" : "Створити акаунт",
+      signin: en ? "Already have an account? Sign In" : "Вже є акаунт? Увійти",
+      emailUsed: en ? "This email is already in use." : "Ця пошта вже використовується.",
+      generic: en ? "Registration error." : "Помилка реєстрації.",
     };
   }, [lang]);
 
@@ -35,11 +37,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({ name, surname, email, password });
-      navigate("/login", { replace: true });
+      navigate("/login?registered=true", { replace: true });
     } catch (e2) {
-      console.error(e2);
       const status = e2?.response?.status;
-      setErr(status === 400 ? t.emailUsed : "Error");
+      setErr(status === 400 ? t.emailUsed : t.generic);
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,11 @@ export default function RegisterPage() {
       <div className="w-full max-w-md bg-white/10 rounded-3xl p-8">
         <h1 className="text-3xl font-semibold">{t.title}</h1>
 
-        {err ? <div className="mt-4 bg-red-500/15 border border-red-400/30 rounded-xl p-3 text-sm">{err}</div> : null}
+        {err ? (
+          <div className="mt-4 bg-red-500/15 border border-red-400/30 rounded-xl p-3 text-sm">
+            {err}
+          </div>
+        ) : null}
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <input

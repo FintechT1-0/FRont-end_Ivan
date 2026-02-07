@@ -3,18 +3,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import { createCourse, getCourse, updateCourse } from "../../api/adminCourses";
 import { useLang } from "../../context/LanguageContext";
 
-/* ---------------- helpers ---------------- */
-
 function tagsToString(tags) {
   if (!Array.isArray(tags)) return "";
   return tags.filter(Boolean).join(", ");
 }
 
 function stringToTags(str) {
-  return (str || "")
+  const tags = (str || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  return tags.length ? tags : [];
 }
 
 function normalizeCourse(data = {}) {
@@ -24,41 +23,85 @@ function normalizeCourse(data = {}) {
     description_ua: data.description_ua ?? "",
     description_en: data.description_en ?? "",
     category: data.category ?? "",
-    // API expects durationText
     durationText: data.durationText ?? "",
-    // API expects number
-    price: typeof data.price === "number" ? data.price : Number(data.price) || 0,
+    price:
+      typeof data.price === "number" ? data.price : Number(data.price) || 0,
     image: data.image ?? "",
     link: data.link ?? data.url ?? "",
     tags: Array.isArray(data.tags) ? data.tags : [],
-
-    // extra flags for your UI
     isPublished: Boolean(data.isPublished),
     isArchived: Boolean(data.isArchived),
   };
 }
 
-function validateCourseCreate(form, lang) {
+function validateCourse(form, lang) {
   const ua = lang === "ua";
   const errors = [];
 
-  if (!form.title_ua?.trim()) errors.push(ua ? "Заповни Title (UA)." : "Fill Title (UA).");
-  if (!form.title_en?.trim()) errors.push(ua ? "Заповни Title (EN)." : "Fill Title (EN).");
-  if (!form.description_ua?.trim()) errors.push(ua ? "Заповни Description (UA)." : "Fill Description (UA).");
-  if (!form.description_en?.trim()) errors.push(ua ? "Заповни Description (EN)." : "Fill Description (EN).");
-  if (!form.category?.trim()) errors.push(ua ? "Заповни Category." : "Fill Category.");
-  if (!form.durationText?.trim()) errors.push(ua ? "Заповни Duration." : "Fill Duration.");
+  if (!form.title_ua?.trim())
+    errors.push(ua ? "Заповни Title (UA)." : "Fill Title (UA).");
+  if (!form.title_en?.trim())
+    errors.push(ua ? "Заповни Title (EN)." : "Fill Title (EN).");
+  if (!form.description_ua?.trim())
+    errors.push(ua ? "Заповни Description (UA)." : "Fill Description (UA).");
+  if (!form.description_en?.trim())
+    errors.push(ua ? "Заповни Description (EN)." : "Fill Description (EN).");
+  if (!form.category?.trim())
+    errors.push(ua ? "Заповни Category." : "Fill Category.");
+  if (!form.durationText?.trim())
+    errors.push(ua ? "Заповни Duration." : "Fill Duration.");
+
   if (!Array.isArray(form.tags) || form.tags.length < 1)
     errors.push(ua ? "Додай хоча б один tag." : "Add at least one tag.");
 
-  // price is required (>= 0)
   const price = Number(form.price);
-  if (Number.isNaN(price) || price < 0) errors.push(ua ? "Price має бути >= 0." : "Price must be >= 0.");
+  if (Number.isNaN(price) || price < 0)
+    errors.push(ua ? "Price має бути >= 0." : "Price must be >= 0.");
+
+  if (!form.isPublished && !form.isArchived)
+    errors.push(
+      ua
+        ? "Обери статус: Опубліковано або В архіві."
+        : "Choose status: Published or Archived."
+    );
+
+  if (form.isPublished && form.isArchived)
+    errors.push(
+      ua
+        ? "Не можна вибрати два статуси одночасно."
+        : "You can't select both statuses."
+    );
 
   return errors;
 }
 
-/* ---------------- page ---------------- */
+function toNullIfEmpty(v) {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s.length ? s : null;
+}
+
+function sanitizePayload(form, tagsText) {
+  const tags = stringToTags(tagsText);
+
+  const payload = {
+    title_ua: toNullIfEmpty(form.title_ua),
+    title_en: toNullIfEmpty(form.title_en),
+    description_ua: toNullIfEmpty(form.description_ua),
+    description_en: toNullIfEmpty(form.description_en),
+    category: toNullIfEmpty(form.category),
+    durationText: toNullIfEmpty(form.durationText),
+    price: Number(form.price) || 0,
+    image: toNullIfEmpty(form.image),
+    link: toNullIfEmpty(form.link),
+    speaker: null,
+    tags,
+    isPublished: Boolean(form.isPublished),
+    isArchived: Boolean(form.isArchived),
+  };
+
+  return payload;
+}
 
 export default function AdminCourseEditorPage() {
   const { lang } = useLang();
@@ -69,14 +112,12 @@ export default function AdminCourseEditorPage() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(normalizeCourse());
-
-  // UI-only field for tags input
   const [tagsText, setTagsText] = useState("");
 
   const t = useMemo(() => {
     const ua = lang === "ua";
     return {
-      title: isEdit ? (ua ? "Редагувати курс" : "Edit course") : (ua ? "Створити курс" : "Create course"),
+      title: isEdit ? (ua ? "Редагувати курс" : "Edit course") : ua ? "Створити курс" : "Create course",
       save: ua ? "Зберегти" : "Save",
       back: ua ? "Назад" : "Back",
       placeholder: ua
@@ -86,6 +127,8 @@ export default function AdminCourseEditorPage() {
       tagsHint: ua ? "Введи теги через кому. Напр: fintech, ai, regtech" : "Enter tags separated by commas. Ex: fintech, ai, regtech",
       publish: ua ? "Опубліковано" : "Published",
       archived: ua ? "В архіві" : "Archived",
+      saveFailed: ua ? "Не вдалося зберегти курс." : "Save failed.",
+      loadFailed: ua ? "Не вдалося завантажити курс." : "Failed to load course.",
     };
   }, [lang, isEdit]);
 
@@ -101,13 +144,12 @@ export default function AdminCourseEditorPage() {
       try {
         const data = await getCourse(id);
         if (!alive) return;
-
         const normalized = normalizeCourse(data);
         setForm(normalized);
         setTagsText(tagsToString(normalized.tags));
       } catch (e) {
         console.error(e);
-        alert("Failed to load course");
+        alert(t.loadFailed);
         navigate("/admin/courses", { replace: true });
       } finally {
         if (alive) setLoading(false);
@@ -118,22 +160,32 @@ export default function AdminCourseEditorPage() {
     return () => {
       alive = false;
     };
-  }, [id, isEdit, navigate]);
+  }, [id, isEdit, navigate, t.loadFailed]);
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const onTogglePublished = (v) => {
+    setForm((prev) => ({
+      ...prev,
+      isPublished: v,
+      isArchived: v ? false : prev.isArchived,
+    }));
+  };
+
+  const onToggleArchived = (v) => {
+    setForm((prev) => ({
+      ...prev,
+      isArchived: v,
+      isPublished: v ? false : prev.isPublished,
+    }));
+  };
 
   const onSave = async (e) => {
     e.preventDefault();
 
-    const tags = stringToTags(tagsText);
-    const payload = {
-      ...form,
-      tags,
-      price: Number(form.price) || 0,
-    };
+    const payload = sanitizePayload(form, tagsText);
+    const errors = validateCourse({ ...form, tags: stringToTags(tagsText) }, lang);
 
-    // ✅ create requires strict fields; edit can be partial, but we keep same validation to avoid API 422
-    const errors = validateCourseCreate(payload, lang);
     if (errors.length) {
       alert(errors.join("\n"));
       return;
@@ -141,15 +193,12 @@ export default function AdminCourseEditorPage() {
 
     setSaving(true);
     try {
-      if (isEdit) {
-        await updateCourse(id, payload);
-      } else {
-        await createCourse(payload);
-      }
+      if (isEdit) await updateCourse(id, payload);
+      else await createCourse(payload);
       navigate("/admin/courses", { replace: true });
     } catch (e2) {
       console.error(e2);
-      alert("Save failed");
+      alert(t.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -174,7 +223,10 @@ export default function AdminCourseEditorPage() {
         </button>
       </div>
 
-      <form onSubmit={onSave} className="mt-6 bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+      <form
+        onSubmit={onSave}
+        className="mt-6 bg-white rounded-xl border border-slate-200 p-6 space-y-6"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <InputField
             label={`Title (UA) (${t.required})`}
@@ -188,36 +240,31 @@ export default function AdminCourseEditorPage() {
             onChange={(v) => set("title_en", v)}
             placeholder="Course title in English"
           />
-
           <InputField
             label={`Category (${t.required})`}
             value={form.category}
             onChange={(v) => set("category", v)}
             placeholder="regtech_suptech / ai_finance / ..."
           />
-
           <InputField
             label={`Duration (${t.required})`}
             value={form.durationText}
             onChange={(v) => set("durationText", v)}
             placeholder='Напр. "20 годин (3 лекції, 2 практичні)"'
           />
-
           <InputField
             type="number"
             label={`Price (${t.required})`}
-            value={String(form.price)}
+            value={String(form.price ?? 0)}
             onChange={(v) => set("price", v)}
             placeholder="0"
           />
-
           <InputField
             label="Image URL"
             value={form.image}
             onChange={(v) => set("image", v)}
             placeholder="https://..."
           />
-
           <InputField
             colSpan
             label="Original link"
@@ -225,7 +272,6 @@ export default function AdminCourseEditorPage() {
             onChange={(v) => set("link", v)}
             placeholder="https://..."
           />
-
           <InputField
             colSpan
             label={`Tags (${t.required})`}
@@ -233,14 +279,12 @@ export default function AdminCourseEditorPage() {
             onChange={(v) => setTagsText(v)}
             placeholder={t.tagsHint}
           />
-
           <TextareaField
             label={`Description (UA) (${t.required})`}
             value={form.description_ua}
             onChange={(v) => set("description_ua", v)}
             placeholder="Опис українською"
           />
-
           <TextareaField
             label={`Description (EN) (${t.required})`}
             value={form.description_en}
@@ -253,12 +297,12 @@ export default function AdminCourseEditorPage() {
           <Checkbox
             label={t.publish}
             checked={form.isPublished}
-            onChange={(v) => set("isPublished", v)}
+            onChange={onTogglePublished}
           />
           <Checkbox
             label={t.archived}
             checked={form.isArchived}
-            onChange={(v) => set("isArchived", v)}
+            onChange={onToggleArchived}
           />
         </div>
 
@@ -275,8 +319,6 @@ export default function AdminCourseEditorPage() {
     </div>
   );
 }
-
-/* ---------------- UI components ---------------- */
 
 function InputField({ label, value, onChange, type = "text", colSpan, placeholder }) {
   return (

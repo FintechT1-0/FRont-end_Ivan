@@ -8,6 +8,10 @@ function safeText(v) {
   return typeof v === "string" ? v : "";
 }
 
+function pickImage(item) {
+  return item?.image || item?.thumbnail || null;
+}
+
 export default function InsightsPage() {
   const { lang } = useLang();
   const navigate = useNavigate();
@@ -16,18 +20,26 @@ export default function InsightsPage() {
   const [loading, setLoading] = useState(true);
 
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
 
   const t = useMemo(() => {
+    const en = lang === "en";
     return {
-      title: lang === "en" ? "Insider" : "Інсайди",
-      search: lang === "en" ? "Search" : "Пошук",
-      latest: lang === "en" ? "Latest" : "Найновіші",
-      loading: lang === "en" ? "Loading…" : "Завантаження…",
-      empty: lang === "en" ? "No insights found" : "Інсайдів не знайдено",
-      read: lang === "en" ? "Read" : "Читати",
-      noImage: lang === "en" ? "No image" : "Немає фото",
+      title: en ? "Insights" : "Інсайди",
+      search: en ? "Search" : "Пошук",
+      latest: en ? "Latest" : "Найновіші",
+      all: en ? "All news" : "Усі новини",
+      loading: en ? "Loading…" : "Завантаження…",
+      empty: en ? "No insights found" : "Інсайдів не знайдено",
+      read: en ? "Read" : "Читати",
+      noImage: en ? "No image" : "Немає фото",
     };
   }, [lang]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQ(q.trim().toLowerCase()), 450);
+    return () => clearTimeout(id);
+  }, [q]);
 
   useEffect(() => {
     let alive = true;
@@ -55,29 +67,29 @@ export default function InsightsPage() {
   }, [lang]);
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return items;
+    if (!debouncedQ) return items;
 
     return items.filter((n) => {
       const hay = [
-        safeText(n.title),
-        safeText(n.excerpt),
-        safeText(n.content),
-        safeText(n.category),
-        safeText(n.date),
+        safeText(n?.title),
+        safeText(n?.excerpt),
+        safeText(n?.content),
+        safeText(n?.category),
+        safeText(n?.date),
       ]
         .join(" ")
         .toLowerCase();
-      return hay.includes(query);
+
+      return hay.includes(debouncedQ);
     });
-  }, [items, q]);
+  }, [items, debouncedQ]);
 
   const latest = filtered.slice(0, 6);
   const rest = filtered.slice(6, 24);
 
   function openDetails(item) {
-    const u = encodeURIComponent(item.url || "");
-    navigate(`/insights/view?u=${u}`);
+    if (!item) return;
+    navigate("/insights/view", { state: { item } });
   }
 
   const Placeholder = ({ className = "" }) => (
@@ -87,66 +99,79 @@ export default function InsightsPage() {
   );
 
   const Tile = ({ item }) => {
-    const hasImg = Boolean(item?.image || item?.thumbnail);
+    const img = pickImage(item);
+
     return (
       <button
         type="button"
         onClick={() => openDetails(item)}
-        className="min-w-[240px] max-w-[240px] text-left bg-white/10 rounded-2xl overflow-hidden hover:opacity-95 transition"
-        title={item.title}
+        className="min-w-[240px] max-w-[240px] text-left bg-white/10 rounded-2xl overflow-hidden hover:bg-white/15 transition"
+        title={item?.title || ""}
       >
         <div className="h-[140px] bg-[#D9D9D9]">
-          {hasImg ? (
+          {img ? (
             <SafeImage
-              src={item.image}
-              fallbackSrc={item.thumbnail}
-              alt={item.title}
+              src={img}
+              fallbackSrc={null}
+              alt={item?.title || "insight"}
               className="w-full h-full object-cover"
             />
           ) : (
             <Placeholder />
           )}
         </div>
+
         <div className="p-3">
           <div className="text-[12px] text-white/70 flex items-center justify-between gap-2">
-            <span className="truncate">{item.category || ""}</span>
-            <span className="shrink-0">{item.date || ""}</span>
+            <span className="truncate">{item?.category || ""}</span>
+            <span className="shrink-0">{item?.date || ""}</span>
           </div>
-          <div className="mt-2 font-semibold text-sm line-clamp-2">{item.title}</div>
+          <div className="mt-2 font-semibold text-sm line-clamp-2">
+            {item?.title || "—"}
+          </div>
         </div>
       </button>
     );
   };
 
   const CardText = ({ item }) => {
-    const hasImg = Boolean(item?.image || item?.thumbnail);
-    const preview = item.excerpt || item.content || "";
+    const img = pickImage(item);
+    const preview = item?.excerpt || item?.content || "";
+
     return (
       <button
         type="button"
         onClick={() => openDetails(item)}
-        className="text-left bg-white/10 rounded-3xl overflow-hidden hover:opacity-95 transition"
-        title={item.title}
+        className="text-left bg-white/10 rounded-3xl overflow-hidden hover:bg-white/15 transition"
+        title={item?.title || ""}
       >
         <div className="h-[200px] bg-[#D9D9D9]">
-          {hasImg ? (
+          {img ? (
             <SafeImage
-              src={item.image}
-              fallbackSrc={item.thumbnail}
-              alt={item.title}
+              src={img}
+              fallbackSrc={null}
+              alt={item?.title || "insight"}
               className="w-full h-full object-cover"
             />
           ) : (
             <Placeholder />
           )}
         </div>
+
         <div className="p-5">
           <div className="text-[12px] text-white/70 flex items-center justify-between gap-2">
-            <span className="truncate">{item.category || ""}</span>
-            <span className="shrink-0">{item.date || ""}</span>
+            <span className="truncate">{item?.category || ""}</span>
+            <span className="shrink-0">{item?.date || ""}</span>
           </div>
-          <div className="mt-2 text-lg font-semibold line-clamp-2">{item.title}</div>
-          <div className="mt-2 text-sm text-white/80 line-clamp-3">{preview}</div>
+
+          <div className="mt-2 text-lg font-semibold line-clamp-2">
+            {item?.title || "—"}
+          </div>
+
+          <div className="mt-2 text-sm text-white/80 line-clamp-3">
+            {preview}
+          </div>
+
           <div className="mt-4 text-sm underline text-white/90">{t.read}</div>
         </div>
       </button>
@@ -154,20 +179,21 @@ export default function InsightsPage() {
   };
 
   const CardPhoto = ({ item }) => {
-    const hasImg = Boolean(item?.image || item?.thumbnail);
+    const img = pickImage(item);
+
     return (
       <button
         type="button"
         onClick={() => openDetails(item)}
-        className="text-left bg-white/10 rounded-3xl overflow-hidden hover:opacity-95 transition"
-        title={item.title}
+        className="text-left bg-white/10 rounded-3xl overflow-hidden hover:bg-white/15 transition"
+        title={item?.title || ""}
       >
         <div className="h-[320px] bg-[#D9D9D9] relative">
-          {hasImg ? (
+          {img ? (
             <SafeImage
-              src={item.image}
-              fallbackSrc={item.thumbnail}
-              alt={item.title}
+              src={img}
+              fallbackSrc={null}
+              alt={item?.title || "insight"}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -176,10 +202,12 @@ export default function InsightsPage() {
 
           <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
             <div className="text-[12px] text-white/75 flex items-center justify-between gap-2">
-              <span className="truncate">{item.category || ""}</span>
-              <span className="shrink-0">{item.date || ""}</span>
+              <span className="truncate">{item?.category || ""}</span>
+              <span className="shrink-0">{item?.date || ""}</span>
             </div>
-            <div className="mt-2 font-semibold line-clamp-2">{item.title}</div>
+            <div className="mt-2 font-semibold line-clamp-2">
+              {item?.title || "—"}
+            </div>
           </div>
         </div>
       </button>
@@ -216,16 +244,21 @@ export default function InsightsPage() {
 
               <div className="mt-4 flex gap-4 overflow-x-auto pb-4">
                 {latest.map((item) => (
-                  <Tile key={item.url} item={item} />
+                  <Tile key={item?.url || item?.title} item={item} />
                 ))}
               </div>
 
               <div className="mt-8 border-t border-white/15 pt-8">
-                <div className="grid grid-cols-12 gap-6">
+                <div className="text-xl font-semibold">{t.all}</div>
+
+                <div className="mt-5 grid grid-cols-12 gap-6">
                   {rest.map((item, idx) => {
                     const isPhotoOnly = idx % 3 === 2;
                     return (
-                      <div key={item.url} className="col-span-12 md:col-span-6 lg:col-span-4">
+                      <div
+                        key={item?.url || `${item?.title}-${idx}`}
+                        className="col-span-12 md:col-span-6 lg:col-span-4"
+                      >
                         {isPhotoOnly ? <CardPhoto item={item} /> : <CardText item={item} />}
                       </div>
                     );

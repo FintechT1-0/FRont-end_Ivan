@@ -34,7 +34,9 @@ export default function HomePage() {
       loading: ua ? "Завантаження…" : "Loading…",
       empty: ua ? "Поки що немає інсайтів" : "No insights yet",
 
-      partners: ua ? "Наші партнери та провайдери контенту" : "Our partners and content providers",
+      partners: ua
+        ? "Наші партнери та провайдери контенту"
+        : "Our partners and content providers",
       bottom: ua
         ? "Ми співпрацюємо з освітніми платформами та FinTech-компаніями, щоб моніторити найбільш релевантні можливості для користувачів."
         : "We collaborate with educational platforms and fintech companies to monitor the most relevant opportunities for our users.",
@@ -42,7 +44,6 @@ export default function HomePage() {
     [ua]
   );
 
-  // ✅ Insights: only newest (top 1)
   const [latestInsight, setLatestInsight] = useState(null);
   const [loadingInsight, setLoadingInsight] = useState(true);
 
@@ -56,7 +57,6 @@ export default function HomePage() {
         const res = await publicClient.get(endpoint);
         const list = res?.data || [];
         const newest = Array.isArray(list) ? list[0] : null;
-
         if (alive) setLatestInsight(newest || null);
       } catch {
         if (alive) setLatestInsight(null);
@@ -70,14 +70,6 @@ export default function HomePage() {
       alive = false;
     };
   }, [lang]);
-
-  const openInsight = () => {
-    if (!latestInsight) {
-      navigate("/insights");
-      return;
-    }
-    navigate("/insights/view", { state: { item: latestInsight } });
-  };
 
   const insightImg = pickImage(latestInsight);
 
@@ -110,10 +102,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ✅ Two blocks */}
       <section className="w-full">
         <div className="mx-auto max-w-[1400px] px-6 py-24 grid grid-cols-1 md:grid-cols-2 gap-0">
-          {/* Courses = placeholder */}
           <div className="bg-[#9C5B66] p-16 flex flex-col justify-between min-h-[520px]">
             <div>
               <div className="text-[44px] font-light mb-10 text-white">
@@ -134,7 +124,6 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Insights = newest from backend */}
           <div className="bg-[#0B3F7A] p-16 flex flex-col justify-between min-h-[520px]">
             <div>
               <div className="text-[44px] font-light mb-10 text-right text-white">
@@ -164,16 +153,17 @@ export default function HomePage() {
                     </div>
                   ) : null}
 
-                  <div className="text-white text-[22px] font-medium leading-snug">
+                  <div className="text-white text-[22px] font-medium leading-snug line-clamp-2">
                     {latestInsight?.title || "—"}
                   </div>
 
-                  <div className="mt-4 text-white/85 text-[16px] leading-relaxed">
+                  <div className="mt-4 text-white/85 text-[16px] leading-relaxed line-clamp-4">
                     {latestInsight?.excerpt || ""}
                   </div>
 
                   <div className="mt-4 text-white/60 text-sm">
-                    {latestInsight?.date || ""} {latestInsight?.category ? `• ${latestInsight.category}` : ""}
+                    {latestInsight?.date || ""}{" "}
+                    {latestInsight?.category ? `• ${latestInsight.category}` : ""}
                   </div>
                 </div>
               )}
@@ -181,7 +171,7 @@ export default function HomePage() {
 
             <button
               type="button"
-              onClick={openInsight}
+              onClick={() => navigate("/insights")}
               className="text-center underline text-white"
             >
               {t.insightsCta}
