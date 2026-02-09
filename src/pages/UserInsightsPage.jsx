@@ -1,25 +1,41 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import publicClient from "../api/publicClient";
+import { getInsights } from "../api/insights";
 import { useLang } from "../context/LanguageContext";
 
 export default function UserInsightsPage() {
   const { lang } = useLang();
   const navigate = useNavigate();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const endpoint = lang === "en" ? "/insights/en" : "/insights/ua";
+    let alive = true;
 
-    publicClient
-      .get(endpoint)
-      .then((res) => {
-        const list = Array.isArray(res.data) ? res.data.slice(0, 4) : [];
-        setItems(list);
+    setLoading(true);
+
+    getInsights(lang)
+      .then((data) => {
+        // API може повертати або масив, або об'єкт { items: [...] }
+        const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+
+        if (!alive) return;
+        // Якщо треба тільки 4 інсайди — залишай slice(0, 4)
+        setItems(list.slice(0, 4));
       })
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!alive) return;
+        setItems([]);
+      })
+      .finally(() => {
+        if (!alive) return;
+        setLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
   }, [lang]);
 
   return (
@@ -34,13 +50,11 @@ export default function UserInsightsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {items.map((item) => (
             <button
-              key={item.url}
+              key={item.id ?? item.url ?? item.title}
               onClick={() => navigate("/insights/view", { state: { item } })}
               className="text-left rounded-2xl bg-white/10 p-5 hover:bg-white/15 transition"
             >
-              <div className="font-semibold line-clamp-2">
-                {item.title}
-              </div>
+              <div className="font-semibold line-clamp-2">{item.title}</div>
               <div className="mt-2 text-sm text-white/80 line-clamp-3">
                 {item.excerpt || ""}
               </div>
