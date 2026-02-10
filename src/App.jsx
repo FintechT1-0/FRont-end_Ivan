@@ -20,7 +20,6 @@ import AdminAuthPage from "./pages/AdminAuthPage";
 import UserLayout from "./components/UserLayout";
 import UserCabinetPage from "./pages/UserCabinetPage";
 import UserCoursesPage from "./pages/UserCoursesPage";
-import UserInsightsPage from "./pages/UserInsightsPage";
 
 // admin
 import AdminLayout from "./components/AdminLayout";
@@ -55,7 +54,6 @@ export default function App() {
           >
             <Route index element={<UserCabinetPage />} />
             <Route path="courses" element={<UserCoursesPage />} />
-            <Route path="insights" element={<UserInsightsPage />} />
           </Route>
 
           {/* ===== ADMIN PANEL ===== */}
