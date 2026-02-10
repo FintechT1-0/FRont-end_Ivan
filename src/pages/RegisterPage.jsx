@@ -15,6 +15,7 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [info, setInfo] = useState("");
 
   const t = useMemo(() => {
     const en = lang === "en";
@@ -26,36 +27,48 @@ export default function RegisterPage() {
       password: en ? "Password" : "Пароль",
       btn: en ? "Create account" : "Створити акаунт",
       signin: en ? "Already have an account? Sign In" : "Вже є акаунт? Увійти",
-      emailUsed: en ? "This email is already in use." : "Ця пошта вже використовується.",
-      generic: en ? "Registration error." : "Помилка реєстрації.",
+      ok: en
+        ? "Account created. Check your email to verify it, then sign in."
+        : "Акаунт створено. Підтвердь пошту в листі, після цього увійди.",
     };
   }, [lang]);
 
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
+    setInfo("");
     setLoading(true);
+
     try {
       await register({ name, surname, email, password });
-      navigate("/login?registered=true", { replace: true });
+      setInfo(t.ok);
+      setTimeout(() => {
+        navigate("/login?verification=pending", { replace: true });
+      }, 700);
     } catch (e2) {
-      const status = e2?.response?.status;
-      setErr(status === 400 ? t.emailUsed : t.generic);
+      const detail = e2?.response?.data?.detail;
+      setErr(detail || "Error");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-[90vh] bg-[#0E3A73] text-white flex items-center justify-center px-6">
+    <div className="fixed inset-0 bg-[#0E3A73] text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md bg-white/10 rounded-3xl p-8">
         <h1 className="text-3xl font-semibold">{t.title}</h1>
 
-        {err ? (
+        {info && (
+          <div className="mt-4 bg-emerald-500/15 border border-emerald-400/30 rounded-xl p-3 text-sm">
+            {info}
+          </div>
+        )}
+
+        {err && (
           <div className="mt-4 bg-red-500/15 border border-red-400/30 rounded-xl p-3 text-sm">
             {err}
           </div>
-        ) : null}
+        )}
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <input
@@ -65,6 +78,7 @@ export default function RegisterPage() {
             onChange={(e) => setName(e.target.value)}
             required
           />
+
           <input
             className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
             placeholder={t.surname}
@@ -72,6 +86,7 @@ export default function RegisterPage() {
             onChange={(e) => setSurname(e.target.value)}
             required
           />
+
           <input
             className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
             placeholder={t.email}
@@ -80,6 +95,7 @@ export default function RegisterPage() {
             type="email"
             required
           />
+
           <input
             className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
             placeholder={t.password}
