@@ -55,7 +55,6 @@ export default function UserLayout() {
                     Dashboard
                   </SidebarLink>
                   <SidebarLink to="/cabinet/courses">My courses</SidebarLink>
-                  <SidebarLink to="/cabinet/insights">Insights</SidebarLink>
                 </div>
               </div>
 

@@ -128,7 +128,6 @@ export default function UserCabinetPage() {
   const openCourse = (c) => {
     if (!c?.id) return;
     localStorage.setItem("lastCourseId", String(c.id));
-    // якщо у тебе немає /courses/:id, то заміни на navigate("/cabinet/courses")
     navigate(`/courses/${c.id}`);
   };
 
@@ -252,34 +251,14 @@ export default function UserCabinetPage() {
                 </div>
 
                 <div className="mt-auto pt-6 flex items-center justify-between gap-4">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/cabinet/insights")}
-                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
-                  >
-                    {t.openInsights}
-                  </button>
 
-                  <button
-                    type="button"
-                    onClick={() => openInsight(latestInsight)}
-                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
-                  >
-                    {t.read}
-                  </button>
+
                 </div>
               </div>
             ) : (
               <div className="h-full flex flex-col">
                 <div className="text-white/70">{t.emptyInsight}</div>
                 <div className="mt-auto pt-6">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/cabinet/insights")}
-                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
-                  >
-                    {t.openInsights}
-                  </button>
                 </div>
               </div>
             )}
