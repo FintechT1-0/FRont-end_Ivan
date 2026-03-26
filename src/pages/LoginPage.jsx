@@ -22,13 +22,17 @@ export default function LoginPage() {
   const t = useMemo(() => {
     const en = lang === "en";
     return {
-      title: en ? "Sign In" : "Вхід",
-      email: "E-mail",
+      title: en ? "SIGN IN TO FINTECH" : "УВІЙТИ В FINTECH",
+      subtitle: en ? "or use your email account:" : "або використай свій email:",
+      email: en ? "Email" : "Email",
       password: en ? "Password" : "Пароль",
-      btn: en ? "Sign In" : "Увійти",
-      signup: en ? "Create account" : "Зареєструватися",
+      btn: en ? "Sign in" : "Увійти",
+      signup: en ? "Sign up" : "Зареєструватися",
       admin: en ? "For admin" : "Для адміна",
-      back: en ? "Back" : "Назад",
+      hello: en ? "HELLO, FRIEND!" : "ПРИВІТ, ДРУЖЕ!",
+      helloText: en
+        ? "Enter your personal details and start journey with us"
+        : "Введи свої дані та почни шлях разом з нами",
       invalid: en ? "Invalid email or password." : "Невірний e-mail або пароль.",
       notVerified: en
         ? "Email is not verified. Please confirm your email first."
@@ -52,12 +56,6 @@ export default function LoginPage() {
       setErr(reason ? `${t.verifiedFail} ${reason}` : t.verifiedFail);
     }
   }, [params, t.verifiedOk, t.verifiedFail]);
-
-  function handleBack() {
-    const nextRaw = params.get("next");
-    if (nextRaw) navigate(decodeURIComponent(nextRaw));
-    else navigate("/", { replace: true });
-  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -111,79 +109,124 @@ export default function LoginPage() {
     }
   }
 
-  const showResend = err.toLowerCase().includes("verified") || err.toLowerCase().includes("not verified");
+  const showResend =
+    err.toLowerCase().includes("verified") || err.toLowerCase().includes("not verified");
 
   return (
-    <div className="fixed inset-0 bg-[#0E3A73] text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-md bg-white/10 rounded-3xl p-8 relative">
-        <button
-          onClick={handleBack}
-          className="absolute top-4 right-4 text-xl opacity-80 hover:opacity-100"
-          title={t.back}
-          type="button"
-        >
-          ✕
-        </button>
+    <div className="min-h-screen bg-[#f2f2f2] text-[#102744]">
+      <div className="min-h-screen grid md:grid-cols-[1.7fr_1fr]">
+        <div className="flex items-center justify-center px-8 py-12 md:px-12 lg:px-16 xl:px-20">
+          <div className="w-full max-w-[700px]">
+            <h1 className="text-center text-[42px] md:text-[56px] xl:text-[64px] font-extrabold leading-[0.95] tracking-[-0.03em] text-[#102744]">
+              {t.title}
+            </h1>
 
-        <h1 className="text-3xl font-semibold">{t.title}</h1>
+            <p className="mt-24 text-center text-[22px] leading-none text-[#314b66]">
+              {t.subtitle}
+            </p>
 
-        {info ? (
-          <div className="mt-4 bg-emerald-500/15 border border-emerald-400/30 rounded-xl p-3 text-sm">
-            {info}
-          </div>
-        ) : null}
-
-        {err ? (
-          <div className="mt-4 bg-red-500/15 border border-red-400/30 rounded-xl p-3 text-sm">
-            {err}
-            {showResend ? (
-              <button
-                type="button"
-                onClick={onResend}
-                disabled={resendLoading || !email.trim()}
-                className="mt-3 underline block disabled:opacity-60"
-              >
-                {resendLoading ? "..." : t.resend}
-              </button>
+            {info ? (
+              <div className="mt-8 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-4 text-base text-emerald-800">
+                {info}
+              </div>
             ) : null}
+
+            {err ? (
+              <div className="mt-8 rounded-2xl border border-rose-300 bg-rose-50 px-5 py-4 text-base text-rose-800">
+                <div>{err}</div>
+                {showResend ? (
+                  <button
+                    type="button"
+                    onClick={onResend}
+                    disabled={resendLoading || !email.trim()}
+                    className="mt-3 underline block disabled:opacity-60"
+                  >
+                    {resendLoading ? "..." : t.resend}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            <form onSubmit={onSubmit} className="mt-10 space-y-5">
+              <input
+                className="w-full h-16 rounded-full bg-[#dfe4eb] px-7 outline-none text-[18px] text-[#44566c] placeholder:text-[#44566c]"
+                placeholder={t.email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                required
+                autoComplete="email"
+              />
+
+              <input
+                className="w-full h-16 rounded-full bg-[#dfe4eb] px-7 outline-none text-[18px] text-[#44566c] placeholder:text-[#44566c]"
+                placeholder={t.password}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                required
+                autoComplete="current-password"
+              />
+
+              <div className="pt-12 flex justify-center">
+                <button
+                  disabled={loading}
+                  className="min-w-[165px] h-14 rounded-full bg-[#b30808] hover:opacity-90 disabled:opacity-60 transition text-white text-[18px] font-semibold px-10"
+                  type="submit"
+                >
+                  {loading ? "..." : t.btn}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-10 flex items-center justify-center text-[18px] text-[#3a4f68]">
+              <Link to="/admin-auth" className="underline underline-offset-4">
+                {t.admin}
+              </Link>
+            </div>
           </div>
-        ) : null}
+        </div>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <input
-            className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
-            placeholder={t.email}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            required
+        <div className="relative overflow-hidden bg-[#071F43] flex items-center justify-center px-8 py-14">
+          <div
+            className="absolute top-[-18px] right-[-30px] w-56 h-56 bg-[#6a83a6]"
+            style={{
+              clipPath: "polygon(100% 0, 0 0, 100% 100%)",
+              transform: "rotate(-17deg)",
+            }}
           />
 
-          <input
-            className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none"
-            placeholder={t.password}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            required
+          <div
+            className="absolute bottom-[-26px] right-[-18px] w-36 h-36 bg-[#6a83a6]"
+            style={{
+              clipPath: "polygon(100% 0, 0 100%, 100% 100%)",
+              transform: "rotate(-148deg)",
+            }}
           />
 
-          <button
-            disabled={loading}
-            className="w-full h-11 rounded-xl bg-[#A94F5E] hover:opacity-90 disabled:opacity-60 transition"
-            type="submit"
-          >
-            {t.btn}
-          </button>
-        </form>
+          <div
+            className="absolute top-[38%] left-12 w-12 h-4 bg-[#6a83a6]"
+            style={{ transform: "rotate(-25deg)" }}
+          />
 
-        <div className="mt-6 flex items-center justify-between text-sm text-white/85">
-          <Link to="/register" className="underline">
-            {t.signup}
-          </Link>
-          <Link to="/admin-auth" className="underline">
-            {t.admin}
-          </Link>
+          <div className="relative z-10 max-w-[440px] text-center text-white">
+            <h2 className="text-[52px] xl:text-[60px] font-extrabold leading-[0.9] tracking-[-0.03em]">
+              {t.hello}
+            </h2>
+
+            <p className="mt-16 text-[24px] leading-[1.4] text-white/95">
+              {t.helloText}
+            </p>
+
+            <div className="mt-16">
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center min-w-[170px] h-14 rounded-full border border-white/70 text-white text-[18px] font-semibold hover:bg-white/10 transition px-10"
+              >
+                {t.signup}
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
