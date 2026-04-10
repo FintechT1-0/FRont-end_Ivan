@@ -3,7 +3,7 @@ import Logo from "../assets/Logo.png";
 import { useLang } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 
-const shellBg = "#6E819B";
+const shellBg = "#7487A3";
 
 const topGlass = {
   background:
@@ -39,13 +39,16 @@ function SideLink({ to, children, end = false }) {
       style={({ isActive }) => ({
         display: "flex",
         alignItems: "center",
+        width: "100%",
         minHeight: "42px",
-        padding: "0 14px",
+        padding: "0 16px",
         borderRadius: "999px",
         textDecoration: "none",
         color: "#FFFFFF",
         fontSize: "13px",
         fontWeight: 500,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
         background: isActive
           ? "linear-gradient(180deg, rgba(20,57,95,0.98) 0%, rgba(10,39,70,0.98) 100%)"
           : "transparent",
@@ -90,7 +93,7 @@ export default function AdminLayout() {
         >
           <div
             style={{
-              width: "86px",
+              width: "96px",
               height: "44px",
               borderRadius: "999px",
               display: "flex",
@@ -177,7 +180,7 @@ export default function AdminLayout() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "92px 1fr",
+            gridTemplateColumns: "150px 1fr",
             gap: "0",
             minHeight: "760px",
           }}
@@ -185,11 +188,10 @@ export default function AdminLayout() {
           <aside
             style={{
               background: "#082947",
-              borderRadius: "0 0 0 0",
-              padding: "18px 10px",
+              padding: "16px 12px",
               display: "flex",
               flexDirection: "column",
-              gap: "10px",
+              gap: "14px",
             }}
           >
             <SideLink to="/admin" end>
@@ -197,7 +199,7 @@ export default function AdminLayout() {
             </SideLink>
 
             <SideLink to="/admin/activity">
-              {lang === "ua" ? "Активність" : "Activity/Logs"}
+              {lang === "ua" ? "Активність/Логи" : "Activity/Logs"}
             </SideLink>
 
             <SideLink to="/admin/users">
@@ -216,10 +218,16 @@ export default function AdminLayout() {
           <main
             style={{
               background: shellBg,
-              padding: "22px 14px 14px",
+              padding: "18px 12px 12px",
             }}
           >
-            <Outlet />
+            <div
+              style={{
+                maxWidth: "1080px",
+              }}
+            >
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>
