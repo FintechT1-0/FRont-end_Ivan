@@ -241,9 +241,6 @@ function AuthForm({
       style={{
         width: "100%",
         maxWidth: mode === "login" ? "420px" : "470px",
-        opacity: 1,
-        transform: "translateX(0)",
-        transition: "opacity 0.35s ease, transform 0.35s ease",
       }}
     >
       {mode === "login" ? (
@@ -494,19 +491,21 @@ export default function AuthCard({
           .auth-panel {
             position: absolute;
             top: 50%;
+            left: 0;
             width: 42%;
             height: 78%;
-            transform: translateY(-50%);
-            transition: left 0.65s ease, right 0.65s ease, transform 0.65s ease;
+            transform: translate3d(0, -50%, 0);
+            transition: transform 820ms cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform;
             z-index: 3;
           }
 
           .auth-panel.left {
-            left: 0;
+            transform: translate3d(0, -50%, 0);
           }
 
           .auth-panel.right {
-            left: 58%;
+            transform: translate3d(138.1%, -50%, 0);
           }
 
           .auth-form-side {
@@ -518,18 +517,22 @@ export default function AuthCard({
             align-items: center;
             justify-content: center;
             padding: 40px 30px;
-            transition: opacity 0.45s ease, transform 0.55s ease;
+            will-change: transform, opacity;
             z-index: 2;
           }
 
           .auth-form-login {
             left: 0;
-            opacity: 1;
+            transition:
+              opacity 420ms ease,
+              transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
           }
 
           .auth-form-register {
             right: 0;
-            opacity: 1;
+            transition:
+              opacity 420ms ease,
+              transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
           }
 
           @media (max-width: 980px) {
@@ -575,13 +578,13 @@ export default function AuthCard({
       >
         <div className="auth-shell">
           <div
-            className={`auth-form-side auth-form-login`}
+            className="auth-form-side auth-form-login"
             style={{
               opacity: mode === "login" ? 1 : 0,
               transform:
                 mode === "login"
-                  ? "translateX(0)"
-                  : "translateX(-40px)",
+                  ? "translate3d(0, 0, 0) scale(1)"
+                  : "translate3d(-36px, 0, 0) scale(0.985)",
               pointerEvents: mode === "login" ? "auto" : "none",
             }}
           >
@@ -599,13 +602,13 @@ export default function AuthCard({
           </div>
 
           <div
-            className={`auth-form-side auth-form-register`}
+            className="auth-form-side auth-form-register"
             style={{
               opacity: mode === "register" ? 1 : 0,
               transform:
                 mode === "register"
-                  ? "translateX(0)"
-                  : "translateX(40px)",
+                  ? "translate3d(0, 0, 0) scale(1)"
+                  : "translate3d(36px, 0, 0) scale(0.985)",
               pointerEvents: mode === "register" ? "auto" : "none",
             }}
           >

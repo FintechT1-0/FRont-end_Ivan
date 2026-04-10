@@ -52,28 +52,28 @@ export default function App() {
             <Route index element={<UserCabinetPage />} />
             <Route path="courses" element={<UserCoursesPage />} />
           </Route>
-
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute role="admin">
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminCabinetPage />} />
-            <Route path="courses" element={<AdminCoursesPage />} />
-            <Route path="courses/create" element={<AdminCourseEditorPage />} />
-            <Route path="courses/:id" element={<AdminCourseEditorPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="activity" element={<AdminActivityPage />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
-          </Route>
         </Route>
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/admin-auth" element={<AdminAuthPage />} />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminCabinetPage />} />
+          <Route path="courses" element={<AdminCoursesPage />} />
+          <Route path="courses/create" element={<AdminCourseEditorPage />} />
+          <Route path="courses/:id" element={<AdminCourseEditorPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="activity" element={<AdminActivityPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+        </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
