@@ -1,340 +1,448 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import heroVideo from "../assets/hero-bg.mp4";
-import { useMemo, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import publicClient from "../api/publicClient";
+import { getCourses } from "../api/courses";
+import { getInsights } from "../api/insights";
 import { useLang } from "../context/LanguageContext";
 
-function pickImage(item) {
-  return item?.image || item?.thumbnail || null;
-}
-
-const glassCardStyle = {
+const glassCard = {
   background:
-    "linear-gradient(180deg, rgba(18,52,87,0.88) 0%, rgba(10,35,58,0.92) 100%)",
+    "linear-gradient(180deg, rgba(19, 54, 90, 0.78) 0%, rgba(10, 37, 67, 0.88) 100%)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
   backdropFilter: "blur(14px)",
   WebkitBackdropFilter: "blur(14px)",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 30px rgba(0,0,0,0.18)",
 };
 
+const imagePlaceholder = {
+  background: "rgba(111, 134, 164, 0.78)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
+function getLocalizedCourseTitle(course, lang) {
+  return lang === "ua"
+    ? course.title_ua || course.title_en || "Course"
+    : course.title_en || course.title_ua || "Course";
+}
+
+function getLocalizedCourseDescription(course, lang) {
+  return lang === "ua"
+    ? course.description_ua || course.description_en || ""
+    : course.description_en || course.description_ua || "";
+}
+
+function trimText(text = "", max = 150) {
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+}
+
 export default function HomePage() {
-  const navigate = useNavigate();
   const { lang } = useLang();
-  const ua = lang === "ua";
 
-  const t = useMemo(
-    () => ({
-      heroTitle: "FINTECH UNIVERSE",
-      heroSub: ua
-        ? "We are your gateway to financial knowledge"
-        : "We are your gateway to financial knowledge",
-      about: ua
-        ? "We analyze the landscape of educational programs, track trends, and curate high-value fintech content in one place."
-        : "We analyze the landscape of educational programs, track trends, and curate high-value fintech content in one place.",
-      coursesTitle: ua ? "Top FinTech Courses" : "Top FinTech Courses",
-      coursesText: ua
-        ? "Discover fintech courses in digital finance, blockchain, AI, RegTech, SupTech, and fintech product development. FinTech UniVerse bridges the gap between the course market and your professional growth."
-        : "Discover fintech courses in digital finance, blockchain, AI, RegTech, SupTech, and fintech product development. FinTech UniVerse bridges the gap between the course market and your professional growth.",
-      coursesCta: ua ? "View all courses" : "View all courses",
-      insightsTitle: ua ? "Latest Insights" : "Latest Insights",
-      insightsText: ua
-        ? "Global regulators announce new requirements for digital assets: a brief overview of key updates."
-        : "Global regulators announce new requirements for digital assets: a brief overview of key updates.",
-      insightsCta: ua ? "View insights" : "View insights",
-      partnersTitle: ua
-        ? "Our partners and content providers"
-        : "Our partners and content providers",
-      bottom: ua
-        ? "We collaborate with educational platforms and fintech companies to monitor the most relevant opportunities for our users."
-        : "We collaborate with educational platforms and fintech companies to monitor the most relevant opportunities for our users.",
-      loading: ua ? "Loading…" : "Loading…",
-      empty: ua ? "No insights yet" : "No insights yet",
-    }),
-    [ua]
-  );
-
-  const [latestInsight, setLatestInsight] = useState(null);
-  const [loadingInsight, setLoadingInsight] = useState(true);
+  const [coursesData, setCoursesData] = useState([]);
+  const [insightsData, setInsightsData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let alive = true;
+    let active = true;
 
-    async function load() {
-      setLoadingInsight(true);
+    async function loadHomeData() {
       try {
-        const endpoint = lang === "en" ? "/insights/en" : "/insights/ua";
-        const res = await publicClient.get(endpoint);
-        const list = res?.data || [];
-        const newest = Array.isArray(list) ? list[0] : null;
-        if (alive) setLatestInsight(newest || null);
-      } catch {
-        if (alive) setLatestInsight(null);
+        setLoading(true);
+
+        const [coursesResponse, insightsResponse] = await Promise.all([
+          getCourses({ page: 1, pageSize: 2 }),
+          getInsights(lang),
+        ]);
+
+        if (!active) return;
+
+        setCoursesData(coursesResponse?.courses || []);
+        setInsightsData(Array.isArray(insightsResponse) ? insightsResponse : []);
+      } catch (error) {
+        console.error("Failed to load home data:", error);
+        if (!active) return;
+        setCoursesData([]);
+        setInsightsData([]);
       } finally {
-        if (alive) setLoadingInsight(false);
+        if (active) setLoading(false);
       }
     }
 
-    load();
+    loadHomeData();
+
     return () => {
-      alive = false;
+      active = false;
     };
   }, [lang]);
 
-  const insightImg = pickImage(latestInsight);
+  const topCourses = useMemo(() => coursesData.slice(0, 2), [coursesData]);
+  const topInsights = useMemo(() => insightsData.slice(0, 2), [insightsData]);
 
   return (
-    <div className="w-full bg-[#071F35] text-white">
-      <section className="relative overflow-hidden -mt-[88px] pt-[88px] md:-mt-[96px] md:pt-[96px]">
-        <div className="relative h-[620px] sm:h-[700px] md:h-[760px]">
+    <div
+      style={{
+        background: "#082947",
+        minHeight: "100vh",
+        padding: "0 16px 32px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+        }}
+      >
+        <section
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: "0 0 28px 28px",
+            minHeight: "670px",
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "#082947",
+          }}
+        >
           <video
-            className="absolute inset-0 w-full h-full object-cover"
-            src={heroVideo}
             autoPlay
             muted
             loop
             playsInline
-            preload="auto"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          >
+            <source src={heroVideo} type="video/mp4" />
+          </video>
+
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(4,24,44,0.18) 0%, rgba(6,32,58,0.48) 44%, rgba(7,35,62,0.94) 100%)",
+            }}
           />
-          <div className="absolute inset-0 bg-[#071F35]/58" />
 
-          <div className="relative mx-auto max-w-[1400px] px-4 sm:px-6 h-full flex flex-col">
-            <div className="flex-1 flex items-end justify-center pb-44 sm:pb-44 md:pb-28">
-              <div className="text-center">
-                <div className="text-[34px] sm:text-[56px] md:text-[92px] font-extralight tracking-[0.08em] leading-none text-transparent">
-                  <span
-                    style={{
-                      WebkitTextStroke: "1.5px rgba(255,255,255,0.75)",
-                      textShadow:
-                        "0 0 18px rgba(255,255,255,0.08), 0 0 4px rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    {t.heroTitle}
-                  </span>
-                </div>
-
-                <div className="mt-3 text-white/85 text-sm sm:text-base">
-                  {t.heroSub}
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute left-4 right-4 bottom-8 sm:left-6 sm:right-6 md:bottom-10">
-              <div
-                className="mx-auto max-w-[1280px] rounded-[28px] border border-white/10 px-5 py-6 sm:px-8 sm:py-8"
-                style={glassCardStyle}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 2,
+              minHeight: "670px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              padding: "120px 24px 130px",
+            }}
+          >
+            <div>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(46px, 6.5vw, 78px)",
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.18)",
+                  WebkitTextStroke: "1.5px rgba(220, 232, 244, 0.95)",
+                  textShadow:
+                    "0 0 18px rgba(255,255,255,0.08), 0 4px 20px rgba(0,0,0,0.26)",
+                }}
               >
-                <p className="text-center text-white/90 text-sm sm:text-lg leading-relaxed max-w-[920px] mx-auto">
-                  {t.about}
-                </p>
-              </div>
+                FinTech Universe
+              </h1>
+
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  color: "rgba(255,255,255,0.82)",
+                  fontSize: "15px",
+                }}
+              >
+                {lang === "ua"
+                  ? "Твій простір для фінансових знань."
+                  : "We are your gateway to financial knowledge."}
+              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 pb-8 sm:pb-12 text-white">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          <div
-            className="rounded-[24px] sm:rounded-[28px] border border-white/10 p-3 sm:p-6"
-            style={glassCardStyle}
-          >
-            <div className="rounded-[20px] sm:rounded-[22px] bg-white/30 h-[140px] sm:h-[210px] grid place-items-center">
-              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-white/70" />
-            </div>
-
-            <div className="mt-4 sm:mt-5 text-[16px] sm:text-lg font-semibold">
-              {t.coursesTitle}
-            </div>
-
-            <div className="mt-2 text-[11px] sm:text-sm leading-relaxed text-white/80">
-              {t.coursesText}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/courses")}
-              className="mt-4 sm:mt-5 inline-flex items-center rounded-full bg-[#A0141A] px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-medium hover:opacity-90"
-            >
-              {t.coursesCta}
-            </button>
-          </div>
-
-          <div
-            className="rounded-[24px] sm:rounded-[28px] border border-white/10 p-3 sm:p-6"
-            style={glassCardStyle}
-          >
-            <div className="rounded-[20px] sm:rounded-[22px] bg-white/30 h-[140px] sm:h-[210px] overflow-hidden grid place-items-center">
-              {loadingInsight ? (
-                <div className="text-[10px] sm:text-sm text-white/70">
-                  {t.loading}
-                </div>
-              ) : insightImg ? (
-                <img
-                  src={insightImg}
-                  alt={latestInsight?.title || "insight"}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              ) : (
-                <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-white/70" />
-              )}
-            </div>
-
-            <div className="mt-4 sm:mt-5 text-[16px] sm:text-lg font-semibold">
-              {t.insightsTitle}
-            </div>
-
-            <div className="mt-2 text-[11px] sm:text-sm leading-relaxed text-white/80 line-clamp-4">
-              {latestInsight?.excerpt || latestInsight?.title || t.insightsText}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/insights")}
-              className="mt-4 sm:mt-5 inline-flex items-center rounded-full bg-[#A0141A] px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-medium hover:opacity-90"
-            >
-              {t.insightsCta}
-            </button>
-          </div>
-        </div>
-
-        <div
-          className="mt-8 rounded-[24px] sm:rounded-[28px] border border-white/10 px-5 py-5 sm:px-8 sm:py-8"
-          style={glassCardStyle}
+        <section
+          style={{
+            marginTop: "-60px",
+            position: "relative",
+            zIndex: 3,
+          }}
         >
-          <p className="text-center text-[11px] sm:text-base leading-relaxed text-white/90 max-w-[920px] mx-auto">
-            {t.about}
-          </p>
-        </div>
+          <div
+            style={{
+              ...glassCard,
+              borderRadius: "20px",
+              padding: "22px 26px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#E8EFF7",
+                fontSize: "18px",
+                lineHeight: 1.45,
+              }}
+            >
+              {lang === "ua"
+                ? "Ми аналізуємо ринок освітніх програм, відстежуємо тренди та збираємо цінний fintech-контент в одному місці."
+                : "We analyze the landscape of educational programs, track trends, and curate high-value fintech content in one place."}
+            </p>
+          </div>
+        </section>
 
-        <div className="mt-10">
-          <h2 className="text-[18px] sm:text-[28px] font-semibold mb-5 sm:mb-6">
-            {t.partnersTitle}
+        <section
+          style={{
+            paddingTop: "36px",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: "18px",
+            }}
+          >
+            <article
+              style={{
+                ...glassCard,
+                borderRadius: "22px",
+                padding: "16px",
+                color: "#FFFFFF",
+              }}
+            >
+              <div
+                style={{
+                  ...imagePlaceholder,
+                  height: "220px",
+                  borderRadius: "18px",
+                  marginBottom: "16px",
+                  overflow: "hidden",
+                }}
+              >
+                {topCourses[0]?.image ? (
+                  <img
+                    src={topCourses[0].image}
+                    alt={getLocalizedCourseTitle(topCourses[0], lang)}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : null}
+              </div>
+
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "24px",
+                  fontWeight: 600,
+                }}
+              >
+                {lang === "ua" ? "Топ fintech-курсів" : "Top FinTech Courses"}
+              </h3>
+
+              <p
+                style={{
+                  margin: "10px 0 18px",
+                  color: "rgba(255,255,255,0.86)",
+                  lineHeight: 1.5,
+                  fontSize: "14px",
+                  minHeight: "64px",
+                }}
+              >
+                {loading
+                  ? lang === "ua"
+                    ? "Завантаження курсів..."
+                    : "Loading courses..."
+                  : topCourses[0]
+                  ? trimText(getLocalizedCourseDescription(topCourses[0], lang), 150)
+                  : lang === "ua"
+                  ? "Курси з’являться після підключення або оновлення контенту."
+                  : "Courses will appear after content is connected or updated."}
+              </p>
+
+              <Link to="/courses" style={ctaButton}>
+                {lang === "ua" ? "Усі курси" : "View all courses"}
+              </Link>
+            </article>
+
+            <article
+              style={{
+                ...glassCard,
+                borderRadius: "22px",
+                padding: "16px",
+                color: "#FFFFFF",
+              }}
+            >
+              <div
+                style={{
+                  ...imagePlaceholder,
+                  height: "220px",
+                  borderRadius: "18px",
+                  marginBottom: "16px",
+                  overflow: "hidden",
+                }}
+              >
+                {topInsights[0]?.image || topInsights[0]?.thumbnail ? (
+                  <img
+                    src={topInsights[0].image || topInsights[0].thumbnail}
+                    alt={topInsights[0].title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : null}
+              </div>
+
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "24px",
+                  fontWeight: 600,
+                }}
+              >
+                {lang === "ua" ? "Останні інсайти" : "Latest Insights"}
+              </h3>
+
+              <p
+                style={{
+                  margin: "10px 0 18px",
+                  color: "rgba(255,255,255,0.86)",
+                  lineHeight: 1.5,
+                  fontSize: "14px",
+                  minHeight: "64px",
+                }}
+              >
+                {loading
+                  ? lang === "ua"
+                    ? "Завантаження інсайтів..."
+                    : "Loading insights..."
+                  : topInsights[0]
+                  ? trimText(topInsights[0].excerpt || topInsights[0].content, 150)
+                  : lang === "ua"
+                  ? "Інсайти з’являться після оновлення стрічки."
+                  : "Insights will appear after the feed is updated."}
+              </p>
+
+              <Link to="/insights" style={ctaButton}>
+                {lang === "ua" ? "Інсайди" : "View insights"}
+              </Link>
+            </article>
+          </div>
+        </section>
+
+        <section
+          style={{
+            paddingTop: "34px",
+          }}
+        >
+          <div
+            style={{
+              ...glassCard,
+              borderRadius: "20px",
+              padding: "22px 26px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#E8EFF7",
+                fontSize: "18px",
+                lineHeight: 1.45,
+              }}
+            >
+              {lang === "ua"
+                ? "Ми аналізуємо ринок освітніх програм, відстежуємо тренди та збираємо цінний fintech-контент в одному місці."
+                : "We analyze the landscape of educational programs, track trends, and curate high-value fintech content in one place."}
+            </p>
+          </div>
+        </section>
+
+        <section
+          style={{
+            paddingTop: "34px",
+            color: "#FFFFFF",
+          }}
+        >
+          <h2
+            style={{
+              margin: "0 0 20px",
+              fontSize: "34px",
+              fontWeight: 600,
+            }}
+          >
+            {lang === "ua"
+              ? "Наші партнери та постачальники контенту"
+              : "Our partners and content providers"}
           </h2>
 
-          <div className="grid grid-cols-12 gap-3 sm:gap-6">
-            <div className="col-span-5 rounded-[22px] sm:rounded-[28px] bg-white/30 h-[150px] sm:h-[320px] grid place-items-center">
-              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-white/70" />
-            </div>
+          <div
+            style={{
+              ...glassCard,
+              borderRadius: "22px",
+              padding: "40px 20px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: "18px",
+                color: "#E8EFF7",
+              }}
+            >
+              {lang === "ua"
+                ? "Цей блок ще в розробці"
+                : "This section is under development"}
+            </p>
 
-            <div className="col-span-4 rounded-[22px] sm:rounded-[28px] bg-white/30 h-[150px] sm:h-[320px] grid place-items-center">
-              <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-white/70" />
-            </div>
-
-            <div className="col-span-3 flex flex-col gap-3 sm:gap-6">
-              <div className="rounded-[20px] sm:rounded-[28px] bg-white/30 h-[69px] sm:h-[150px] grid place-items-center">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg bg-white/70" />
-              </div>
-              <div className="rounded-[20px] sm:rounded-[28px] bg-white/30 h-[69px] sm:h-[150px] grid place-items-center">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg bg-white/70" />
-              </div>
-            </div>
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: "14px",
+                color: "rgba(255,255,255,0.7)",
+              }}
+            >
+              {lang === "ua"
+                ? "У майбутніх версіях тут з’являться реальні партнери та контент-провайдери."
+                : "It will be updated in future versions with real partners and content providers."}
+            </p>
           </div>
-
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-white/30 shrink-0 grid place-items-center">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-white/70" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[9px] sm:text-sm leading-none text-white/90 truncate">
-                    lorem ipsum
-                  </div>
-                  <div className="mt-1 text-[7px] sm:text-xs leading-none text-white/60 truncate">
-                    lorem ipsum lorem
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="mt-8 rounded-[24px] sm:rounded-[28px] border border-white/10 px-5 py-6 sm:px-8 sm:py-8"
-          style={glassCardStyle}
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 sm:gap-8 text-[9px] sm:text-sm text-white/75">
-            <div className="space-y-2 sm:space-y-3">
-              <div className="text-white/90 text-[10px] sm:text-base leading-snug">
-                lorem ipsum lorem ipsum lorem
-              </div>
-              <div>FinTech ipsum lorem ipsum lorem ipsum lorem ipsum lorem</div>
-              <div>ipsum lorem</div>
-            </div>
-
-            <div className="space-y-2 sm:space-y-3">
-              <div>ipsum lorem</div>
-              <div>ipsum lorem</div>
-              <div>ipsum lorem</div>
-              <div>ipsum lorem</div>
-            </div>
-
-            <div className="space-y-2 sm:space-y-3">
-              <div>ipsum lorem</div>
-              <div>ipsum lorem</div>
-              <div>ipsum lorem</div>
-              <div>ipsum lorem</div>
-            </div>
-
-            <div className="flex flex-col items-start">
-              <div className="text-[10px] sm:text-base text-white/90 leading-snug">
-                Follow
-                <br />
-                FinTech
-              </div>
-
-             <div className="mt-2 sm:mt-3 flex items-center gap-1.5 sm:gap-2">
-  <a
-    href="#"
-    className="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-[#A0141A] flex items-center justify-center"
-    aria-label="Instagram"
-  >
-    <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-white">
-      <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5a4.25 4.25 0 0 0 4.25-4.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5Zm8.75 1.25a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM12 6.5A5.5 5.5 0 1 1 6.5 12 5.5 5.5 0 0 1 12 6.5Zm0 1.5A4 4 0 1 0 16 12a4 4 0 0 0-4-4Z" />
-    </svg>
-  </a>
-
-  <a
-    href="#"
-    className="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-[#A0141A] flex items-center justify-center"
-    aria-label="Facebook"
-  >
-    <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-white">
-      <path d="M13.5 21v-7h2.3l.35-2.7H13.5V9.58c0-.78.22-1.3 1.34-1.3H16.3V5.86A17.7 17.7 0 0 0 14.18 5c-2.1 0-3.54 1.28-3.54 3.64v2.66H8.25V14h2.39v7Z" />
-    </svg>
-  </a>
-
-<a
-  href="#"
-  className="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-[#A0141A] flex items-center justify-center"
-  aria-label="X"
->
-  <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-white">
-    <path d="M18.244 2H21l-6.016 6.876L22 22h-5.49l-4.3-6.272L6.72 22H4l6.43-7.35L2 2h5.63l3.887 5.67L18.244 2Zm-.964 18.2h1.523L6.8 3.71H5.164Z" />
-  </svg>
-</a>
-
-  <a
-    href="#"
-    className="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-[#A0141A] flex items-center justify-center"
-    aria-label="WhatsApp"
-  >
-    <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-white">
-      <path d="M20.52 3.48A11.82 11.82 0 0 0 12.06 0 11.94 11.94 0 0 0 1.74 17.9L0 24l6.27-1.64A11.94 11.94 0 0 0 24 12.06a11.82 11.82 0 0 0-3.48-8.58ZM12.06 21.5a9.4 9.4 0 0 1-4.79-1.31l-.34-.2-3.72.98 1-3.63-.22-.37A9.43 9.43 0 1 1 12.06 21.5Zm5.18-7.04c-.28-.14-1.64-.81-1.9-.9-.25-.1-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.15.18-.31.21-.58.07-.28-.14-1.15-.42-2.19-1.33a8.17 8.17 0 0 1-1.52-1.88c-.16-.28 0-.43.12-.57.13-.13.28-.34.42-.5.14-.17.18-.28.28-.46.09-.18.04-.35-.03-.49-.07-.14-.61-1.47-.84-2.01-.22-.53-.44-.46-.61-.47h-.52c-.18 0-.46.07-.7.35-.25.28-.94.92-.94 2.24s.96 2.6 1.1 2.78c.14.18 1.88 2.87 4.56 4.03.64.27 1.14.43 1.53.55.64.2 1.22.17 1.68.1.51-.08 1.64-.67 1.87-1.32.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" />
-    </svg>
-  </a>
-</div>
-
-              <div className="mt-4 sm:mt-6 w-12 h-8 sm:w-16 sm:h-10 rounded-xl bg-white/20" />
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
+
+const ctaButton = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "34px",
+  padding: "0 14px",
+  borderRadius: "999px",
+  background: "#B3131A",
+  color: "#FFFFFF",
+  fontSize: "12px",
+  fontWeight: 600,
+  textDecoration: "none",
+  boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
+};

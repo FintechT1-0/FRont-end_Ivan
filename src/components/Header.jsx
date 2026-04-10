@@ -8,9 +8,10 @@ function HeaderLink({ to, children }) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `transition hover:text-white ${
-          isActive ? "text-white" : "text-white/85"
-        }`
+        [
+          "text-sm md:text-[15px] leading-none transition-colors duration-200",
+          isActive ? "text-white" : "text-white/80 hover:text-white",
+        ].join(" ")
       }
     >
       {children}
@@ -29,93 +30,141 @@ export default function Header() {
     insights: { en: "Insights", ua: "Інсайди" },
     partners: { en: "Partners", ua: "Партнери" },
     signIn: { en: "Sign In", ua: "Увійти" },
+    cabinet: { en: "Cabinet", ua: "Кабінет" },
   };
 
   const goCabinet = async () => {
     if (initializing) return;
 
-    let u = user;
+    let currentUser = user;
 
-    if (!u && token) {
+    if (!currentUser && token) {
       try {
-        u = await refreshMe();
+        currentUser = await refreshMe();
       } catch {
-        u = null;
+        currentUser = null;
       }
     }
 
-    if (!u) return navigate("/login?next=%2Fcabinet");
-    if (u.role === "admin") return navigate("/admin");
-    return navigate("/cabinet");
+    if (!currentUser) {
+      navigate("/login?next=%2Fcabinet");
+      return;
+    }
+
+    if (currentUser.role === "admin") {
+      navigate("/admin");
+      return;
+    }
+
+    navigate("/cabinet");
   };
 
   return (
     <header className="sticky top-0 z-50 bg-transparent">
-      <div className="mx-auto max-w-[1400px] px-3 pt-3 sm:px-4 md:px-6 md:pt-5">
+      <div className="mx-auto w-full max-w-[1280px] px-4 pt-4 md:px-6 md:pt-6">
         <div
-          className="rounded-[26px] border border-white/20 px-4 py-3 md:rounded-[30px] md:px-8 md:py-4"
+          className="relative overflow-hidden rounded-[28px] border border-white/15 px-4 py-4 md:rounded-[34px] md:px-6 md:py-5"
           style={{
             background:
-              "linear-gradient(180deg, rgba(29,66,101,0.62) 0%, rgba(19,52,87,0.52) 100%)",
-            backdropFilter: "blur(18px)",
-            WebkitBackdropFilter: "blur(18px)",
+              "linear-gradient(180deg, rgba(22,58,94,0.92) 0%, rgba(14,43,73,0.95) 100%)",
             boxShadow:
-              "inset 0 1px 0 rgba(255,255,255,0.10), 0 10px 35px rgba(0,0,0,0.18), 0 0 30px rgba(255,255,255,0.04)",
+              "inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 40px rgba(0,0,0,0.25)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
           }}
         >
-          <div className="hidden md:flex items-center">
-            <img src={Logo} alt="FinTech UniVerse" className="h-10 w-auto shrink-0" />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle at 20% 0%, rgba(255,255,255,0.08), transparent 35%)",
+            }}
+          />
 
-            <nav className="ml-auto flex items-center gap-7 text-lg">
+          <div className="relative hidden items-center md:flex">
+            <NavLink
+              to="/"
+              className="flex h-[58px] w-[150px] items-center rounded-[999px] border border-white/10 pl-4"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(31,76,121,0.95) 0%, rgba(18,49,81,0.96) 100%)",
+                boxShadow:
+                  "inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 24px rgba(0,0,0,0.15)",
+              }}
+            >
+              <img
+                src={Logo}
+                alt="FinTech UniVerse"
+                className="h-[34px] w-auto object-contain"
+              />
+            </NavLink>
+
+            <nav className="mx-auto flex items-center gap-10">
               <HeaderLink to="/">{nav.main[lang]}</HeaderLink>
               <HeaderLink to="/courses">{nav.courses[lang]}</HeaderLink>
               <HeaderLink to="/insights">{nav.insights[lang]}</HeaderLink>
               <HeaderLink to="/partners">{nav.partners[lang]}</HeaderLink>
             </nav>
 
-            <div className="ml-8 flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <button
-                onClick={toggleLang}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-sm text-white transition"
                 type="button"
+                onClick={toggleLang}
+                className="flex h-[38px] min-w-[52px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-xs font-medium text-white transition hover:bg-white/10"
               >
                 {lang === "en" ? "UA" : "EN"}
               </button>
 
               <button
-                onClick={goCabinet}
-                className="px-5 py-2 rounded-full bg-[#A0141A] hover:opacity-90 transition text-white text-sm"
                 type="button"
+                onClick={goCabinet}
+                className="flex h-[38px] items-center justify-center rounded-full bg-[#B3131A] px-5 text-sm font-medium text-white transition hover:opacity-90"
+                style={{
+                  boxShadow: "0 8px 20px rgba(179,19,26,0.32)",
+                }}
               >
-                {nav.signIn[lang]}
+                {user ? nav.cabinet[lang] : nav.signIn[lang]}
               </button>
             </div>
           </div>
 
-          <div className="md:hidden">
+          <div className="relative md:hidden">
             <div className="flex items-center gap-3">
-              <img src={Logo} alt="FinTech UniVerse" className="h-8 w-auto shrink-0" />
+              <NavLink
+                to="/"
+                className="flex h-[48px] w-[110px] items-center rounded-[999px] border border-white/10 pl-3"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(31,76,121,0.95) 0%, rgba(18,49,81,0.96) 100%)",
+                }}
+              >
+                <img
+                  src={Logo}
+                  alt="FinTech UniVerse"
+                  className="h-[28px] w-auto object-contain"
+                />
+              </NavLink>
 
               <div className="ml-auto flex items-center gap-2">
                 <button
-                  onClick={toggleLang}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs text-white transition"
                   type="button"
+                  onClick={toggleLang}
+                  className="flex h-[34px] min-w-[46px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-[11px] font-medium text-white"
                 >
                   {lang === "en" ? "UA" : "EN"}
                 </button>
 
                 <button
-                  onClick={goCabinet}
-                  className="px-4 py-1.5 rounded-full bg-[#A0141A] hover:opacity-90 transition text-white text-xs"
                   type="button"
+                  onClick={goCabinet}
+                  className="flex h-[34px] items-center justify-center rounded-full bg-[#B3131A] px-4 text-[11px] font-medium text-white"
                 >
-                  {nav.signIn[lang]}
+                  {user ? nav.cabinet[lang] : nav.signIn[lang]}
                 </button>
               </div>
             </div>
 
-            <nav className="mt-3 flex items-center justify-end gap-4 text-xs sm:text-sm">
+            <nav className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4 text-[12px]">
               <HeaderLink to="/">{nav.main[lang]}</HeaderLink>
               <HeaderLink to="/courses">{nav.courses[lang]}</HeaderLink>
               <HeaderLink to="/insights">{nav.insights[lang]}</HeaderLink>

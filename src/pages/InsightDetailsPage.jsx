@@ -8,19 +8,24 @@ function sanitizeHtml(html) {
   if (!html) return "";
   let out = String(html);
 
-  // remove script tags
   out = out.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
-
-  // remove inline event handlers like onclick=
   out = out.replace(/\son\w+="[^"]*"/gi, "");
   out = out.replace(/\son\w+='[^']*'/gi, "");
-
-  // optionally remove style attributes (to keep design consistent)
   out = out.replace(/\sstyle="[^"]*"/gi, "");
   out = out.replace(/\sstyle='[^']*'/gi, "");
 
   return out;
 }
+
+const glassCard = {
+  background:
+    "linear-gradient(180deg, rgba(19, 54, 90, 0.78) 0%, rgba(10, 37, 67, 0.88) 100%)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+};
 
 export default function InsightDetailsPage() {
   const { lang } = useLang();
@@ -40,10 +45,10 @@ export default function InsightDetailsPage() {
 
   const t = useMemo(() => {
     return {
-      loading: lang === "en" ? "Loading…" : "Завантаження…",
+      loading: lang === "en" ? "Loading..." : "Завантаження...",
       notFound: lang === "en" ? "Insight not found" : "Інсайт не знайдено",
       back: lang === "en" ? "Back" : "Назад",
-      source: lang === "en" ? "Open original source" : "Відкрити оригінальне джерело",
+      source: lang === "en" ? "Open original source" : "Відкрити джерело",
       summary: lang === "en" ? "Summary" : "Коротко",
       full: lang === "en" ? "Full text" : "Повний текст",
       noImage: lang === "en" ? "No image" : "Немає фото",
@@ -80,6 +85,7 @@ export default function InsightDetailsPage() {
     }
 
     load();
+
     return () => {
       alive = false;
     };
@@ -87,21 +93,29 @@ export default function InsightDetailsPage() {
 
   if (loading) {
     return (
-      <div className="bg-[#0E3A73] text-white min-h-[90vh]">
-        <div className="max-w-5xl mx-auto px-6 py-10 text-center">{t.loading}</div>
+      <div className="min-h-[90vh] bg-[#082947] text-white">
+        <div className="mx-auto max-w-5xl px-6 py-10 text-center">
+          {t.loading}
+        </div>
       </div>
     );
   }
 
   if (!item) {
     return (
-      <div className="bg-[#0E3A73] text-white min-h-[90vh]">
-        <div className="max-w-5xl mx-auto px-6 py-10">
-          <div className="text-xl font-semibold">{t.notFound}</div>
-          <div className="mt-4">
-            <Link to="/insights" className="underline text-white/90 hover:text-white">
-              ← {t.back}
-            </Link>
+      <div className="min-h-[90vh] bg-[#082947] text-white">
+        <div className="mx-auto max-w-5xl px-6 py-10">
+          <div style={glassCard} className="rounded-[28px] p-8">
+            <div className="text-xl font-semibold">{t.notFound}</div>
+
+            <div className="mt-4">
+              <Link
+                to="/insights"
+                className="text-white/90 underline hover:text-white"
+              >
+                ← {t.back}
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -110,39 +124,43 @@ export default function InsightDetailsPage() {
 
   const hasImg = Boolean(item?.image || item?.thumbnail);
   const summary = item.excerpt || "";
-  const rawHtml = item.content || "";
-  const html = sanitizeHtml(rawHtml);
+  const html = sanitizeHtml(item.content || "");
 
   const Placeholder = () => (
-    <div className="w-full h-full flex items-center justify-center text-white/70 text-sm">
+    <div className="flex h-full w-full items-center justify-center text-sm text-white/70">
       {t.noImage}
     </div>
   );
 
   return (
-    <div className="bg-[#0E3A73] text-white min-h-[90vh]">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className="min-h-[90vh] bg-[#082947] text-white">
+      <div className="mx-auto max-w-5xl px-6 py-10">
+
         <div className="mb-6 flex items-center justify-between gap-4">
           <Link
             to="/insights"
             className="inline-flex items-center gap-2 text-white/90 hover:text-white"
           >
-            <span className="text-lg">←</span>
-            <span className="underline">{t.back}</span>
+            ← <span className="underline">{t.back}</span>
           </Link>
 
           <a
             href={item.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center px-5 py-2 rounded-xl bg-white/15 hover:bg-white/25 transition"
+            className="rounded-full px-5 py-2 text-sm font-medium text-white"
+            style={{
+              background: "#B3131A",
+              boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
+            }}
           >
             {t.source}
           </a>
         </div>
 
-        <article className="bg-[#0B3D78] rounded-[28px] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
-          <div className="h-[360px] bg-[#D9D9D9]">
+        <article style={glassCard} className="rounded-[28px] overflow-hidden">
+
+          <div className="h-[360px] bg-[#6F86A4]/70">
             {hasImg ? (
               <SafeImage
                 src={item.image}
@@ -156,43 +174,46 @@ export default function InsightDetailsPage() {
           </div>
 
           <div className="p-8 md:p-10">
-            <div className="text-[12px] text-white/70 flex items-center justify-between gap-3">
-              <span className="truncate">{item.category || ""}</span>
-              <span className="shrink-0">{item.date || ""}</span>
+
+            <div className="flex justify-between text-[12px] text-white/70">
+              <span>{item.category || ""}</span>
+              <span>{item.date || ""}</span>
             </div>
 
-            <h1 className="mt-4 text-3xl md:text-4xl font-semibold leading-tight">
+            <h1 className="mt-4 text-3xl md:text-4xl font-semibold">
               {item.title}
             </h1>
 
-            {summary ? (
+            {summary && (
               <section className="mt-8">
-                <div className="text-sm font-semibold text-white/90">{t.summary}</div>
-                <p className="mt-2 text-white/85 leading-7">{summary}</p>
+                <div className="text-sm font-semibold text-white/90">
+                  {t.summary}
+                </div>
+                <p className="mt-2 text-white/85 leading-7">
+                  {summary}
+                </p>
               </section>
-            ) : null}
+            )}
 
             <section className="mt-10">
-              <div className="text-sm font-semibold text-white/90">{t.full}</div>
+              <div className="text-sm font-semibold text-white/90">
+                {t.full}
+              </div>
 
-              {/* Styled HTML content */}
               <div
                 className="
-                  mt-4 text-white/90 leading-7
-                  max-w-none
-                  prose prose-invert
+                  prose prose-invert mt-4 max-w-none text-white/90
                   prose-p:my-3
-                  prose-a:text-white prose-a:underline prose-a:underline-offset-4
+                  prose-a:text-white prose-a:underline
                   prose-strong:text-white
-                  prose-ul:my-4 prose-ol:my-4
-                  prose-li:my-1
-                  prose-blockquote:border-l prose-blockquote:border-white/30 prose-blockquote:pl-4 prose-blockquote:text-white/80
                 "
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             </section>
+
           </div>
         </article>
+
       </div>
     </div>
   );

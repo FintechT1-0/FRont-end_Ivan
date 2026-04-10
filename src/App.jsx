@@ -34,16 +34,13 @@ export default function App() {
   return (
     <DesktopOnly>
       <Routes>
-        {/* ===== PUBLIC LAYOUT ===== */}
         <Route element={<Layout />}>
-          {/* public */}
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/insights/view" element={<InsightDetailsPage />} />
+          <Route path="/insights/details" element={<InsightDetailsPage />} />
           <Route path="/partners" element={<PartnersPage />} />
 
-          {/* ===== USER CABINET ===== */}
           <Route
             path="/cabinet"
             element={
@@ -56,7 +53,6 @@ export default function App() {
             <Route path="courses" element={<UserCoursesPage />} />
           </Route>
 
-          {/* ===== ADMIN PANEL ===== */}
           <Route
             path="/admin"
             element={
@@ -75,12 +71,10 @@ export default function App() {
           </Route>
         </Route>
 
-        {/* ===== AUTH WITHOUT LAYOUT ===== */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/admin-auth" element={<AdminAuthPage />} />
 
-        {/* ===== FALLBACK ===== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DesktopOnly>

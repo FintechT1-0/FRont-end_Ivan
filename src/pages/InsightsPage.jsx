@@ -1,273 +1,638 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useLang } from "../context/LanguageContext";
+import { Link } from "react-router-dom";
 import { getInsightsEn, getInsightsUa } from "../api/insights";
+import { useLang } from "../context/LanguageContext";
 import SafeImage from "../components/SafeImage";
 
-function safeText(v) {
-  return typeof v === "string" ? v : "";
+const glassCard = {
+  background:
+    "linear-gradient(180deg, rgba(19, 54, 90, 0.78) 0%, rgba(10, 37, 67, 0.88) 100%)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+};
+
+const imagePlaceholder = {
+  background: "rgba(111, 134, 164, 0.78)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
+function trimText(text = "", max = 120) {
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max).trim()}...` : text;
 }
 
-function pickImage(item) {
-  return item?.image || item?.thumbnail || null;
+function normalizeInsights(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items.map((item, index) => ({
+    id: item.url || `${item.title}-${index}`,
+    title: item.title || "Insight",
+    excerpt: item.excerpt || item.content || "",
+    content: item.content || "",
+    image: item.image || item.thumbnail || "",
+    thumbnail: item.thumbnail || "",
+    category: item.category || "FinTech",
+    date: item.date || "",
+    url: item.url || "",
+    lang: item.lang || "",
+  }));
+}
+
+function buildDetailsLink(url) {
+  return `/insights/details?u=${encodeURIComponent(url || "")}`;
+}
+
+function TopInsightLarge({ item, lang }) {
+  return (
+    <Link
+      to={buildDetailsLink(item.url)}
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+        height: "100%",
+      }}
+    >
+      <article
+        style={{
+          ...glassCard,
+          borderRadius: "24px",
+          padding: "16px",
+          color: "#FFFFFF",
+          minHeight: "100%",
+          transition: "transform 0.2s ease",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            ...imagePlaceholder,
+            height: "320px",
+            borderRadius: "20px",
+            marginBottom: "16px",
+            overflow: "hidden",
+          }}
+        >
+          {item?.image || item?.thumbnail ? (
+            <SafeImage
+              src={item.image}
+              fallbackSrc={item.thumbnail}
+              alt={item.title}
+              className="w-full h-full object-cover"
+            />
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginBottom: "10px",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: "28px",
+              padding: "0 12px",
+              borderRadius: "999px",
+              background: "rgba(255,255,255,0.08)",
+              color: "#FFFFFF",
+              fontSize: "12px",
+              fontWeight: 600,
+            }}
+          >
+            {item.category}
+          </span>
+
+          {item.date ? (
+            <span
+              style={{
+                color: "rgba(255,255,255,0.72)",
+                fontSize: "12px",
+              }}
+            >
+              {item.date}
+            </span>
+          ) : null}
+        </div>
+
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "28px",
+            lineHeight: 1.2,
+            fontWeight: 600,
+          }}
+        >
+          {item.title}
+        </h2>
+
+        <p
+          style={{
+            margin: "12px 0 0",
+            color: "rgba(255,255,255,0.82)",
+            lineHeight: 1.55,
+            fontSize: "14px",
+          }}
+        >
+          {trimText(item.excerpt, 180)}
+        </p>
+      </article>
+    </Link>
+  );
+}
+
+function TopInsightMedium({ item }) {
+  return (
+    <Link
+      to={buildDetailsLink(item.url)}
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+        height: "100%",
+      }}
+    >
+      <article
+        style={{
+          ...glassCard,
+          borderRadius: "24px",
+          padding: "16px",
+          color: "#FFFFFF",
+          minHeight: "100%",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            ...imagePlaceholder,
+            height: "320px",
+            borderRadius: "20px",
+            marginBottom: "16px",
+            overflow: "hidden",
+          }}
+        >
+          {item?.image || item?.thumbnail ? (
+            <SafeImage
+              src={item.image}
+              fallbackSrc={item.thumbnail}
+              alt={item.title}
+              className="w-full h-full object-cover"
+            />
+          ) : null}
+        </div>
+
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "24px",
+            lineHeight: 1.2,
+            fontWeight: 600,
+          }}
+        >
+          {item.title}
+        </h3>
+
+        <p
+          style={{
+            margin: "10px 0 0",
+            color: "rgba(255,255,255,0.82)",
+            lineHeight: 1.55,
+            fontSize: "14px",
+          }}
+        >
+          {trimText(item.excerpt, 130)}
+        </p>
+      </article>
+    </Link>
+  );
+}
+
+function TopInsightSmall({ item }) {
+  return (
+    <Link
+      to={buildDetailsLink(item.url)}
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+        height: "100%",
+      }}
+    >
+      <article
+        style={{
+          ...glassCard,
+          borderRadius: "24px",
+          padding: "14px",
+          minHeight: "172px",
+          overflow: "hidden",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            ...imagePlaceholder,
+            height: "100%",
+            minHeight: "144px",
+            borderRadius: "18px",
+            overflow: "hidden",
+          }}
+        >
+          {item?.image || item?.thumbnail ? (
+            <SafeImage
+              src={item.image}
+              fallbackSrc={item.thumbnail}
+              alt={item.title}
+              className="w-full h-full object-cover"
+            />
+          ) : null}
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+function InsightListItem({ item, lang }) {
+  return (
+    <Link
+      to={buildDetailsLink(item.url)}
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+      }}
+    >
+      <article
+        style={{
+          ...glassCard,
+          borderRadius: "22px",
+          padding: "16px",
+          display: "grid",
+          gridTemplateColumns: "180px 1fr",
+          gap: "16px",
+          alignItems: "stretch",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            ...imagePlaceholder,
+            borderRadius: "18px",
+            overflow: "hidden",
+            minHeight: "130px",
+          }}
+        >
+          {item?.image || item?.thumbnail ? (
+            <SafeImage
+              src={item.image}
+              fallbackSrc={item.thumbnail}
+              alt={item.title}
+              className="w-full h-full object-cover"
+            />
+          ) : null}
+        </div>
+
+        <div style={{ color: "#FFFFFF" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flexWrap: "wrap",
+              marginBottom: "8px",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: "26px",
+                padding: "0 10px",
+                borderRadius: "999px",
+                background: "rgba(255,255,255,0.08)",
+                fontSize: "12px",
+                fontWeight: 600,
+              }}
+            >
+              {item.category}
+            </span>
+
+            {item.date ? (
+              <span
+                style={{
+                  color: "rgba(255,255,255,0.68)",
+                  fontSize: "12px",
+                }}
+              >
+                {item.date}
+              </span>
+            ) : null}
+          </div>
+
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "22px",
+              lineHeight: 1.25,
+              fontWeight: 600,
+            }}
+          >
+            {item.title}
+          </h3>
+
+          <p
+            style={{
+              margin: "10px 0 0",
+              color: "rgba(255,255,255,0.82)",
+              lineHeight: 1.6,
+              fontSize: "14px",
+            }}
+          >
+            {trimText(item.excerpt || item.content, 220)}
+          </p>
+
+          <div
+            style={{
+              marginTop: "12px",
+              color: "#E8EFF7",
+              fontSize: "13px",
+              fontWeight: 600,
+            }}
+          >
+            {lang === "ua" ? "Читати деталі" : "Read details"}
+          </div>
+        </div>
+      </article>
+    </Link>
+  );
 }
 
 export default function InsightsPage() {
   const { lang } = useLang();
-  const navigate = useNavigate();
 
-  const [items, setItems] = useState([]);
+  const [insights, setInsights] = useState([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-
-  const [q, setQ] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
-
-  const t = useMemo(() => {
-    const en = lang === "en";
-    return {
-      title: en ? "Insights" : "Інсайди",
-      search: en ? "Search" : "Пошук",
-      latest: en ? "Latest" : "Найновіші",
-      all: en ? "All news" : "Усі новини",
-      loading: en ? "Loading…" : "Завантаження…",
-      empty: en ? "No insights found" : "Інсайдів не знайдено",
-      read: en ? "Read" : "Читати",
-      noImage: en ? "No image" : "Немає фото",
-    };
-  }, [lang]);
+  const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedQ(q.trim().toLowerCase()), 450);
-    return () => clearTimeout(id);
-  }, [q]);
+    let active = true;
 
-  useEffect(() => {
-    let alive = true;
-
-    async function load() {
-      setLoading(true);
+    async function loadInsights() {
       try {
-        const data = lang === "en" ? await getInsightsEn() : await getInsightsUa();
-        if (!alive) return;
-        setItems(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (!alive) return;
-        console.error(e);
-        setItems([]);
+        setLoading(true);
+        setErrorText("");
+
+        const response = lang === "ua" ? await getInsightsUa() : await getInsightsEn();
+        if (!active) return;
+
+        setInsights(normalizeInsights(response));
+      } catch (error) {
+        console.error("Failed to load insights:", error);
+        if (!active) return;
+
+        setInsights([]);
+        setErrorText(
+          lang === "ua"
+            ? "Не вдалося завантажити інсайти."
+            : "Failed to load insights."
+        );
       } finally {
-        if (!alive) return;
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    load();
+    loadInsights();
+
     return () => {
-      alive = false;
+      active = false;
     };
   }, [lang]);
 
-  const filtered = useMemo(() => {
-    if (!debouncedQ) return items;
+  const filteredInsights = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-    return items.filter((n) => {
-      const hay = [
-        safeText(n?.title),
-        safeText(n?.excerpt),
-        safeText(n?.content),
-        safeText(n?.category),
-        safeText(n?.date),
-      ]
-        .join(" ")
-        .toLowerCase();
+    if (!query) return insights;
 
-      return hay.includes(debouncedQ);
+    return insights.filter((item) => {
+      const title = item.title?.toLowerCase() || "";
+      const excerpt = item.excerpt?.toLowerCase() || "";
+      const category = item.category?.toLowerCase() || "";
+
+      return (
+        title.includes(query) ||
+        excerpt.includes(query) ||
+        category.includes(query)
+      );
     });
-  }, [items, debouncedQ]);
+  }, [insights, search]);
 
-  const latest = filtered.slice(0, 6);
-  const rest = filtered.slice(6, 24);
-
-  function openDetails(item) {
-    if (!item) return;
-    navigate("/insights/view", { state: { item } });
-  }
-
-  const Placeholder = ({ className = "" }) => (
-    <div className={`w-full h-full flex items-center justify-center text-white/70 text-sm ${className}`}>
-      {t.noImage}
-    </div>
-  );
-
-  const Tile = ({ item }) => {
-    const img = pickImage(item);
-
-    return (
-      <button
-        type="button"
-        onClick={() => openDetails(item)}
-        className="min-w-[240px] max-w-[240px] text-left bg-white/10 rounded-2xl overflow-hidden hover:bg-white/15 transition"
-        title={item?.title || ""}
-      >
-        <div className="h-[140px] bg-[#D9D9D9]">
-          {img ? (
-            <SafeImage
-              src={img}
-              fallbackSrc={null}
-              alt={item?.title || "insight"}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Placeholder />
-          )}
-        </div>
-
-        <div className="p-3">
-          <div className="text-[12px] text-white/70 flex items-center justify-between gap-2">
-            <span className="truncate">{item?.category || ""}</span>
-            <span className="shrink-0">{item?.date || ""}</span>
-          </div>
-          <div className="mt-2 font-semibold text-sm line-clamp-2">
-            {item?.title || "—"}
-          </div>
-        </div>
-      </button>
-    );
-  };
-
-  const CardText = ({ item }) => {
-    const img = pickImage(item);
-    const preview = item?.excerpt || item?.content || "";
-
-    return (
-      <button
-        type="button"
-        onClick={() => openDetails(item)}
-        className="text-left bg-white/10 rounded-3xl overflow-hidden hover:bg-white/15 transition"
-        title={item?.title || ""}
-      >
-        <div className="h-[200px] bg-[#D9D9D9]">
-          {img ? (
-            <SafeImage
-              src={img}
-              fallbackSrc={null}
-              alt={item?.title || "insight"}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Placeholder />
-          )}
-        </div>
-
-        <div className="p-5">
-          <div className="text-[12px] text-white/70 flex items-center justify-between gap-2">
-            <span className="truncate">{item?.category || ""}</span>
-            <span className="shrink-0">{item?.date || ""}</span>
-          </div>
-
-          <div className="mt-2 text-lg font-semibold line-clamp-2">
-            {item?.title || "—"}
-          </div>
-
-          <div className="mt-2 text-sm text-white/80 line-clamp-3">
-            {preview}
-          </div>
-
-          <div className="mt-4 text-sm underline text-white/90">{t.read}</div>
-        </div>
-      </button>
-    );
-  };
-
-  const CardPhoto = ({ item }) => {
-    const img = pickImage(item);
-
-    return (
-      <button
-        type="button"
-        onClick={() => openDetails(item)}
-        className="text-left bg-white/10 rounded-3xl overflow-hidden hover:bg-white/15 transition"
-        title={item?.title || ""}
-      >
-        <div className="h-[320px] bg-[#D9D9D9] relative">
-          {img ? (
-            <SafeImage
-              src={img}
-              fallbackSrc={null}
-              alt={item?.title || "insight"}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Placeholder className="absolute inset-0" />
-          )}
-
-          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
-            <div className="text-[12px] text-white/75 flex items-center justify-between gap-2">
-              <span className="truncate">{item?.category || ""}</span>
-              <span className="shrink-0">{item?.date || ""}</span>
-            </div>
-            <div className="mt-2 font-semibold line-clamp-2">
-              {item?.title || "—"}
-            </div>
-          </div>
-        </div>
-      </button>
-    );
-  };
+  const firstLarge = filteredInsights[0];
+  const secondMedium = filteredInsights[1];
+  const sideCards = filteredInsights.slice(2, 4);
+  const restNews = filteredInsights.slice(4);
 
   return (
-    <div className="bg-[#0E3A73] text-white min-h-[90vh]">
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between gap-6">
-          <h1 className="text-4xl font-semibold">{t.title}</h1>
+    <div
+      style={{
+        background: "#082947",
+        minHeight: "100vh",
+        padding: "0 16px 32px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1280px",
+          margin: "0 auto",
+          paddingTop: "24px",
+        }}
+      >
+        <section style={{ paddingTop: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "24px",
+              flexWrap: "wrap",
+              marginBottom: "24px",
+            }}
+          >
+            <div>
+              <h1
+                style={{
+                  margin: 0,
+                  color: "#FFFFFF",
+                  fontSize: "42px",
+                  fontWeight: 700,
+                  lineHeight: 1.15,
+                }}
+              >
+                {lang === "ua" ? "Панель інсайтів" : "Insider panel"}
+              </h1>
 
-          <div className="relative w-full max-w-[420px]">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t.search}
-              className="h-11 w-full rounded-xl bg-white/10 text-white px-4 pr-10 outline-none"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 opacity-80">🔍</span>
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  color: "rgba(255,255,255,0.76)",
+                  fontSize: "16px",
+                }}
+              >
+                {lang === "ua"
+                  ? "Останні fintech-інсайти, новини та оновлення"
+                  : "Latest fintech insights, news and updates"}
+              </p>
+            </div>
+
+            <div
+              style={{
+                ...glassCard,
+                borderRadius: "999px",
+                width: "100%",
+                maxWidth: "420px",
+                height: "48px",
+                padding: "0 18px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={
+                  lang === "ua" ? "Пошук інсайтів..." : "Search insights..."
+                }
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "#FFFFFF",
+                  fontSize: "14px",
+                }}
+              />
+
+              <span
+                style={{
+                  color: "rgba(255,255,255,0.70)",
+                  fontSize: "16px",
+                }}
+              >
+                ⌕
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-8 bg-[#0B3D78] rounded-[28px] p-6">
           {loading ? (
-            <div className="text-center py-10">{t.loading}</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-10 opacity-70">{t.empty}</div>
+            <div
+              style={{
+                ...glassCard,
+                borderRadius: "24px",
+                padding: "40px 24px",
+                textAlign: "center",
+                color: "#FFFFFF",
+              }}
+            >
+              {lang === "ua" ? "Завантаження..." : "Loading..."}
+            </div>
+          ) : errorText ? (
+            <div
+              style={{
+                ...glassCard,
+                borderRadius: "24px",
+                padding: "40px 24px",
+                textAlign: "center",
+                color: "#FFFFFF",
+              }}
+            >
+              {errorText}
+            </div>
+          ) : filteredInsights.length === 0 ? (
+            <div
+              style={{
+                ...glassCard,
+                borderRadius: "24px",
+                padding: "40px 24px",
+                textAlign: "center",
+                color: "#FFFFFF",
+              }}
+            >
+              {lang === "ua"
+                ? "Інсайти не знайдено."
+                : "No insights found."}
+            </div>
           ) : (
             <>
-              <div className="flex items-center justify-between">
-                <div className="text-xl font-semibold">{t.latest}</div>
-              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1.2fr 1fr",
+                  gap: "18px",
+                  alignItems: "stretch",
+                }}
+              >
+                <div>
+                  {firstLarge ? <TopInsightLarge item={firstLarge} lang={lang} /> : null}
+                </div>
 
-              <div className="mt-4 flex gap-4 overflow-x-auto pb-4">
-                {latest.map((item) => (
-                  <Tile key={item?.url || item?.title} item={item} />
-                ))}
-              </div>
+                <div>
+                  {secondMedium ? <TopInsightMedium item={secondMedium} /> : null}
+                </div>
 
-              <div className="mt-8 border-t border-white/15 pt-8">
-                <div className="text-xl font-semibold">{t.all}</div>
-
-                <div className="mt-5 grid grid-cols-12 gap-6">
-                  {rest.map((item, idx) => {
-                    const isPhotoOnly = idx % 3 === 2;
-                    return (
-                      <div
-                        key={item?.url || `${item?.title}-${idx}`}
-                        className="col-span-12 md:col-span-6 lg:col-span-4"
-                      >
-                        {isPhotoOnly ? <CardPhoto item={item} /> : <CardText item={item} />}
-                      </div>
-                    );
-                  })}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateRows: "1fr 1fr",
+                    gap: "18px",
+                  }}
+                >
+                  {sideCards.map((item) => (
+                    <TopInsightSmall key={item.id} item={item} />
+                  ))}
                 </div>
               </div>
+
+              <section style={{ marginTop: "28px" }}>
+                <h2
+                  style={{
+                    margin: "0 0 18px",
+                    color: "#FFFFFF",
+                    fontSize: "30px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {lang === "ua" ? "Усі новини" : "All news"}
+                </h2>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "16px",
+                  }}
+                >
+                  {filteredInsights.map((item) => (
+                    <InsightListItem
+                      key={item.id}
+                      item={item}
+                      lang={lang}
+                    />
+                  ))}
+                </div>
+              </section>
             </>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
