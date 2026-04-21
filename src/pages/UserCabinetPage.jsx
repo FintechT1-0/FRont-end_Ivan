@@ -1,269 +1,163 @@
-// src/pages/UserCabinetPage.jsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import publicClient from "../api/publicClient";
+import { Link } from "react-router-dom";
+import client from "../api/client";
 import { useLang } from "../context/LanguageContext";
 
-function Tile({ label, children, className = "" }) {
-  return (
-    <div className={`rounded-[48px] bg-white/10 overflow-hidden ${className}`}>
-      <div className="px-7 pt-6">
-        <span className="inline-block bg-black/70 text-white text-xs px-3 py-1 rounded-full">
-          {label}
-        </span>
-      </div>
-      <div className="p-7 text-white">{children}</div>
-    </div>
-  );
+function getBackendError(error, fallback) {
+  const detail = error?.response?.data?.detail;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((item) => item.msg).join(", ");
+  }
+
+  return fallback;
 }
 
-function pickImage(item) {
-  return item?.image || item?.thumbnail || null;
-}
-
-function courseTitle(course, lang) {
-  if (!course) return "";
-  return lang === "en"
-    ? course?.title_en || course?.title || ""
-    : course?.title_ua || course?.title || "";
-}
-
-function courseDesc(course, lang) {
-  if (!course) return "";
-  return lang === "en"
-    ? course?.description_en || course?.description || ""
-    : course?.description_ua || course?.description || "";
-}
-
-function safeCoursesArray(data) {
-  if (Array.isArray(data?.courses)) return data.courses;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(data?.results)) return data.results;
-  if (Array.isArray(data)) return data;
-  return [];
-}
+const glassCard = {
+  background:
+    "linear-gradient(180deg, rgba(19, 54, 90, 0.78) 0%, rgba(10, 37, 67, 0.88) 100%)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+};
 
 export default function UserCabinetPage() {
-  const navigate = useNavigate();
   const { lang } = useLang();
 
-  const [latestCourse, setLatestCourse] = useState(null);
-  const [latestInsight, setLatestInsight] = useState(null);
-  const [lastVisitedCourse, setLastVisitedCourse] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errorText, setErrorText] = useState("");
 
   const t = useMemo(() => {
-    const ua = lang !== "en";
     return {
-      progress: ua ? "Прогрес навчання" : "Learning progress",
-      recommended: ua ? "Найновіший курс" : "Newest course",
-      lastVisited: ua ? "Останній відвідуваний курс" : "Last visited course",
-      latestInsight: ua ? "Найновіший інсайт" : "Latest insight",
-      emptyCourse: ua ? "Поки що немає курсів" : "No courses yet",
-      emptyInsight: ua ? "Поки що немає інсайтів" : "No insights yet",
-      view: ua ? "Переглянути" : "View",
-      openCourses: ua ? "Усі курси" : "All courses",
-      openInsights: ua ? "Усі інсайди" : "All insights",
-      read: ua ? "Читати" : "Read",
-      progressText: ua
-        ? "Прогрес буде доступний у фінальній версії продукту."
-        : "Progress will be available in the final version of the product.",
+      title: lang === "ua" ? "КАБІНЕТ КОРИСТУВАЧА" : "USER CABINET",
+      loading: lang === "ua" ? "Завантаження..." : "Loading...",
+      fail:
+        lang === "ua"
+          ? "Не вдалося завантажити профіль"
+          : "Failed to load profile",
+      name: lang === "ua" ? "Ім'я" : "Name",
+      surname: lang === "ua" ? "Прізвище" : "Surname",
+      email: "Email",
+      role: lang === "ua" ? "Роль" : "Role",
+      status: lang === "ua" ? "Статус" : "Status",
+      active: lang === "ua" ? "Активний" : "Active",
+      suspended: lang === "ua" ? "Заблокований" : "Suspended",
+      courses: lang === "ua" ? "Перейти до курсів" : "Go to courses",
+      insights: lang === "ua" ? "Перейти до інсайтів" : "Go to insights",
+      assistant:
+        lang === "ua"
+          ? "AI-асистент доступний через плаваючу кнопку внизу екрана"
+          : "AI assistant is available through the floating button at the bottom",
     };
   }, [lang]);
 
   useEffect(() => {
-    let alive = true;
+    let active = true;
 
-    async function load() {
-      // COURSES
+    async function loadProfile() {
       try {
-        const res = await publicClient.get("/courses", {
-          params: { page: 1, page_size: 20, isPublished: true },
-        });
+        setLoading(true);
+        setErrorText("");
 
-        if (!alive) return;
-        const list = safeCoursesArray(res?.data);
-        setLatestCourse(list[0] || null);
+        const { data } = await client.get("/auth/me");
+        if (!active) return;
 
-        const lastIdRaw = localStorage.getItem("lastCourseId");
-        const lastId = lastIdRaw ? Number(lastIdRaw) : null;
+        setUser(data);
+      } catch (error) {
+        if (!active) return;
 
-        if (lastId) {
-          try {
-            const one = await publicClient.get(`/courses/${lastId}`);
-            if (!alive) return;
-            setLastVisitedCourse(one?.data || null);
-          } catch {
-            if (!alive) return;
-            setLastVisitedCourse(null);
-          }
-        } else {
-          setLastVisitedCourse(null);
-        }
-      } catch {
-        if (!alive) return;
-        setLatestCourse(null);
-        setLastVisitedCourse(null);
-      }
-
-      // INSIGHTS
-      try {
-        const endpoint = lang === "en" ? "/insights/en" : "/insights/ua";
-        const res = await publicClient.get(endpoint);
-        if (!alive) return;
-
-        const list = Array.isArray(res?.data) ? res.data : res?.data?.items || [];
-        setLatestInsight(list?.[0] || null);
-      } catch {
-        if (!alive) return;
-        setLatestInsight(null);
+        setUser(null);
+        setErrorText(getBackendError(error, t.fail));
+      } finally {
+        if (active) setLoading(false);
       }
     }
 
-    load();
+    loadProfile();
+
     return () => {
-      alive = false;
+      active = false;
     };
-  }, [lang]);
-
-  const openCourse = (c) => {
-    if (!c?.id) return;
-    localStorage.setItem("lastCourseId", String(c.id));
-    navigate(`/courses/${c.id}`);
-  };
-
-  const openInsight = (item) => {
-    if (!item) return;
-    navigate("/insights/view", { state: { item } });
-  };
+  }, [t.fail]);
 
   return (
-    <div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <Tile label={t.progress} className="lg:col-span-4 min-h-[520px]">
-          <div className="text-lg font-medium">0%</div>
-          <div className="mt-3 text-white/80 text-sm leading-relaxed">
-            {t.progressText}
+    <div className="min-h-[90vh] bg-[#082947] text-white px-6 py-10">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-semibold mb-8">{t.title}</h1>
+
+        {loading ? (
+          <div style={glassCard} className="rounded-[28px] p-6">
+            {t.loading}
           </div>
-        </Tile>
+        ) : errorText ? (
+          <div style={glassCard} className="rounded-[28px] p-6">
+            {errorText}
+          </div>
+        ) : user ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            <div style={glassCard} className="rounded-[28px] p-6">
+              <div className="grid gap-4 text-sm">
+                <div>
+                  <span className="text-white/60">{t.name}: </span>
+                  <span>{user.name || "-"}</span>
+                </div>
 
-        <Tile label={t.recommended} className="lg:col-span-5 min-h-[520px]">
-          {latestCourse ? (
-            <div className="h-full flex flex-col">
-              <div className="text-xl font-semibold line-clamp-2">
-                {courseTitle(latestCourse, lang)}
-              </div>
+                <div>
+                  <span className="text-white/60">{t.surname}: </span>
+                  <span>{user.surname || "-"}</span>
+                </div>
 
-              <div className="mt-3 text-white/80 text-sm leading-relaxed line-clamp-4">
-                {courseDesc(latestCourse, lang)}
-              </div>
+                <div>
+                  <span className="text-white/60">{t.email}: </span>
+                  <span>{user.email || "-"}</span>
+                </div>
 
-              <div className="mt-auto pt-6 flex items-center justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={() => navigate("/cabinet/courses")}
-                  className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
-                >
-                  {t.openCourses}
-                </button>
+                <div>
+                  <span className="text-white/60">{t.role}: </span>
+                  <span>{user.role || "-"}</span>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => openCourse(latestCourse)}
-                  className="bg-[#A94F5E] px-5 py-2 rounded-full text-sm hover:opacity-90 transition"
-                >
-                  {t.view}
-                </button>
+                <div>
+                  <span className="text-white/60">{t.status}: </span>
+                  <span>{user.is_suspended ? t.suspended : t.active}</span>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="h-full flex flex-col">
-              <div className="text-white/70">{t.emptyCourse}</div>
-              <div className="mt-auto pt-6">
-                <button
-                  type="button"
-                  onClick={() => navigate("/cabinet/courses")}
-                  className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
+
+            <div style={glassCard} className="rounded-[28px] p-6">
+              <div className="text-sm text-white/85 leading-7 mb-5">
+                {t.assistant}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/courses"
+                  className="px-5 py-2 rounded-full text-sm font-medium text-white"
+                  style={{
+                    background: "#B3131A",
+                    boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
+                  }}
                 >
-                  {t.openCourses}
-                </button>
+                  {t.courses}
+                </Link>
+
+                <Link
+                  to="/insights"
+                  className="px-5 py-2 rounded-full text-sm font-medium text-white bg-white/10 hover:bg-white/15"
+                >
+                  {t.insights}
+                </Link>
               </div>
             </div>
-          )}
-        </Tile>
-
-        <div className="lg:col-span-3 flex flex-col gap-8">
-          <Tile label={t.lastVisited} className="min-h-[248px]">
-            {lastVisitedCourse ? (
-              <div className="h-full flex flex-col">
-                <div className="text-lg font-semibold line-clamp-2">
-                  {courseTitle(lastVisitedCourse, lang)}
-                </div>
-                <div className="mt-3 text-white/80 text-sm line-clamp-3">
-                  {courseDesc(lastVisitedCourse, lang)}
-                </div>
-
-                <div className="mt-auto pt-6 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => openCourse(lastVisitedCourse)}
-                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
-                  >
-                    {t.view}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="h-full flex flex-col">
-                <div className="text-white/70">{t.emptyCourse}</div>
-                <div className="mt-auto pt-6 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/cabinet/courses")}
-                    className="bg-white/15 px-5 py-2 rounded-full text-sm hover:bg-white/20 transition"
-                  >
-                    {t.openCourses}
-                  </button>
-                </div>
-              </div>
-            )}
-          </Tile>
-
-          <Tile label={t.latestInsight} className="min-h-[248px]">
-            {latestInsight ? (
-              <div className="h-full flex flex-col">
-                {pickImage(latestInsight) ? (
-                  <div className="bg-white rounded-[24px] h-[120px] overflow-hidden">
-                    <img
-                      src={pickImage(latestInsight)}
-                      alt={latestInsight.title || "Insight"}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  </div>
-                ) : null}
-
-                <div className="mt-4 text-base font-semibold line-clamp-2">
-                  {latestInsight.title || ""}
-                </div>
-
-                <div className="mt-auto pt-6 flex items-center justify-between gap-4">
-
-
-                </div>
-              </div>
-            ) : (
-              <div className="h-full flex flex-col">
-                <div className="text-white/70">{t.emptyInsight}</div>
-                <div className="mt-auto pt-6">
-                </div>
-              </div>
-            )}
-          </Tile>
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

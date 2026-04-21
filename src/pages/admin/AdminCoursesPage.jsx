@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import client from "../../api/client";
+import { deleteCourse, getCourses, updateCourse } from "../../api/courses";
 import { useLang } from "../../context/LanguageContext";
 
 function getLocalizedCourseTitle(course, lang) {
@@ -75,16 +75,12 @@ export default function AdminCoursesPage() {
   const t = useMemo(() => {
     return {
       title: lang === "ua" ? "УСІ КУРСИ" : "ALL COURSES",
-      search: "ПОШУК",
-      category: "УСІ КАТЕГОРІЇ...",
-      statusAll: "УСІ СТАТУСИ...",
-      published: "Published",
-      unpublished: "Unpublished",
-      create: "+ Створити курс",
-      saveDraft: "ЧЕРНЕТКА",
-      preview: "ПЕРЕГЛЯД",
-      publish: "ПУБЛІКАЦІЯ",
-      reset: "СКИДАННЯ",
+      search: lang === "ua" ? "ПОШУК" : "SEARCH",
+      category: lang === "ua" ? "УСІ КАТЕГОРІЇ..." : "ALL CATEGORIES...",
+      statusAll: lang === "ua" ? "УСІ СТАТУСИ..." : "ALL STATUSES...",
+      published: lang === "ua" ? "Опубліковано" : "Published",
+      unpublished: lang === "ua" ? "Неопубліковано" : "Unpublished",
+      create: lang === "ua" ? "+ Створити курс" : "+ Create course",
       noCourses: lang === "ua" ? "Курсів не знайдено" : "No courses found",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
       prev: lang === "ua" ? "Назад" : "Prev",
@@ -108,17 +104,15 @@ export default function AdminCoursesPage() {
     try {
       setLoading(true);
 
-      const params = {
+      const data = await getCourses({
         page: nextPage,
         page_size: 20,
-      };
+        title: search.trim() || undefined,
+        category: category.trim() || undefined,
+        isPublished:
+          status === "published" ? true : status === "unpublished" ? false : undefined,
+      });
 
-      if (search.trim()) params.title = search.trim();
-      if (category.trim()) params.category = category.trim();
-      if (status === "published") params.isPublished = true;
-      if (status === "unpublished") params.isPublished = false;
-
-      const { data } = await client.get("/courses/", { params });
       const normalized = normalizeCoursesResponse(data);
 
       setCourses(normalized.courses);
@@ -156,7 +150,7 @@ export default function AdminCoursesPage() {
 
     try {
       setBusyId(courseId);
-      await client.delete(`/courses/${courseId}`);
+      await deleteCourse(courseId);
       await loadCourses(page);
     } catch (error) {
       alert(getBackendError(error, t.deleteFail));
@@ -168,7 +162,7 @@ export default function AdminCoursesPage() {
   async function handleTogglePublish(course) {
     try {
       setBusyId(course.id);
-      await client.patch(`/courses/${course.id}`, {
+      await updateCourse(course.id, {
         isPublished: !course.isPublished,
       });
       await loadCourses(page);
@@ -180,12 +174,7 @@ export default function AdminCoursesPage() {
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "930px",
-      }}
-    >
+    <div style={{ width: "100%", maxWidth: "930px" }}>
       <div
         style={{
           display: "flex",
@@ -207,27 +196,6 @@ export default function AdminCoursesPage() {
         >
           {t.title}
         </h1>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-          }}
-        >
-          <button type="button" style={topActionButton}>
-            {t.saveDraft}
-          </button>
-          <button type="button" style={topActionButton}>
-            {t.preview}
-          </button>
-          <button type="button" style={topActionButton}>
-            {t.publish}
-          </button>
-          <button type="button" style={topActionButton}>
-            {t.reset}
-          </button>
-        </div>
       </div>
 
       <form
@@ -292,12 +260,12 @@ export default function AdminCoursesPage() {
                 gridTemplateColumns: "1.9fr 0.8fr 0.8fr 1fr 78px",
                 gap: "10px",
                 alignItems: "center",
-                minHeight: "28px",
-                borderRadius: "4px",
+                minHeight: "32px",
+                borderRadius: "6px",
                 background: "rgba(255,255,255,0.96)",
                 padding: "0 12px",
                 color: "#20324A",
-                fontSize: "9px",
+                fontSize: "10px",
               }}
             >
               <div
@@ -346,7 +314,7 @@ export default function AdminCoursesPage() {
                   color: "#6C7480",
                   justifySelf: "start",
                   padding: 0,
-                  fontSize: "9px",
+                  fontSize: "10px",
                 }}
               >
                 <span
@@ -394,15 +362,6 @@ export default function AdminCoursesPage() {
                   title="Edit"
                 >
                   ○
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/courses/${course.id}`)}
-                  style={iconButtonStyle}
-                  title="View"
-                >
-                  ◔
                 </button>
 
                 <button
@@ -461,16 +420,6 @@ export default function AdminCoursesPage() {
   );
 }
 
-const topActionButton = {
-  border: "none",
-  background: "transparent",
-  color: "#FFFFFF",
-  fontSize: "8px",
-  fontWeight: 600,
-  cursor: "pointer",
-  padding: 0,
-};
-
 const searchWrapStyle = {
   position: "relative",
   display: "flex",
@@ -487,42 +436,42 @@ const searchIconStyle = {
 
 const filterStyle = {
   width: "100%",
-  height: "24px",
+  height: "26px",
   borderRadius: "999px",
   border: "none",
   outline: "none",
   padding: "0 10px",
-  fontSize: "8px",
+  fontSize: "10px",
   background: "#FFFFFF",
   color: "#20324A",
 };
 
 const createButtonStyle = {
-  height: "24px",
+  height: "26px",
   minWidth: "124px",
   borderRadius: "999px",
   border: "none",
   background: "#B3131A",
   color: "#FFFFFF",
-  fontSize: "9px",
+  fontSize: "10px",
   fontWeight: 600,
   cursor: "pointer",
   boxShadow: "0 10px 18px rgba(179,19,26,0.22)",
 };
 
 const emptyRowStyle = {
-  borderRadius: "6px",
+  borderRadius: "8px",
   background: "rgba(255,255,255,0.94)",
   padding: "12px 14px",
   color: "#20324A",
-  fontSize: "11px",
+  fontSize: "12px",
 };
 
 const iconButtonStyle = {
   border: "none",
   background: "transparent",
   cursor: "pointer",
-  fontSize: "10px",
+  fontSize: "11px",
   lineHeight: 1,
   padding: 0,
   color: "#8B9199",
@@ -531,13 +480,13 @@ const iconButtonStyle = {
 function pageButtonStyle(disabled) {
   return {
     minWidth: "58px",
-    height: "22px",
+    height: "24px",
     borderRadius: "999px",
     border: "1px solid rgba(255,255,255,0.16)",
     background: "transparent",
     color: "#FFFFFF",
     cursor: disabled ? "default" : "pointer",
     opacity: disabled ? 0.45 : 1,
-    fontSize: "9px",
+    fontSize: "10px",
   };
 }

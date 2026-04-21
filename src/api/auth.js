@@ -9,3 +9,8 @@ export async function registerUser(payload) {
   const { data } = await client.post("/auth/register", payload);
   return data;
 }
+
+export async function resendVerification(payload) {
+  const { data } = await client.post("/auth/resend", payload);
+  return data;
+}
