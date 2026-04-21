@@ -22,7 +22,7 @@ import UserCabinetPage from "./pages/UserCabinetPage";
 import UserCoursesPage from "./pages/UserCoursesPage";
 
 // admin
-import AdminLayout from "./components/AdminLayout";
+import AdminPage from "./pages/admin/AdminPage";
 import AdminCabinetPage from "./pages/admin/AdminCabinetPage";
 import AdminCoursesPage from "./pages/admin/AdminCoursesPage";
 import AdminCourseEditorPage from "./pages/admin/AdminCourseEditorPage";
@@ -62,7 +62,7 @@ export default function App() {
           path="/admin"
           element={
             <ProtectedRoute role="admin">
-              <AdminLayout />
+              <AdminPage />
             </ProtectedRoute>
           }
         >

@@ -171,14 +171,16 @@ function SidePanel({ mode, onSwitch, lang }) {
           textAlign: "center",
         }}
       >
-        <div style={{ maxWidth: "320px" }}>
+        <div style={{ maxWidth: "280px" }}>
           <h2
             style={{
-              margin: 0,
-              fontSize: "58px",
-              lineHeight: 1.02,
+              margin: "0 auto",
+              fontSize: lang === "ua" ? "38px" : "44px",
+              lineHeight: 1.04,
               fontWeight: 700,
               textTransform: "uppercase",
+              maxWidth: "280px",
+              wordBreak: "break-word",
             }}
           >
             {text.title}
@@ -240,7 +242,7 @@ function AuthForm({
     <div
       style={{
         width: "100%",
-        maxWidth: mode === "login" ? "420px" : "470px",
+        maxWidth: mode === "login" ? "420px" : "440px",
       }}
     >
       {mode === "login" ? (
@@ -468,8 +470,6 @@ export default function AuthCard({
     }
   };
 
-  const panelOnLeft = mode === "register";
-
   return (
     <>
       <style>
@@ -482,85 +482,19 @@ export default function AuthCard({
 
           .auth-shell {
             position: relative;
-            width: min(1260px, 100%);
-            min-height: 760px;
+            width: 100%;
+            min-height: 100vh;
+            height: 100vh;
             background: #f4f5f7;
             overflow: hidden;
-          }
-
-          .auth-panel {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 42%;
-            height: 78%;
-            transform: translate3d(0, -50%, 0);
-            transition: transform 820ms cubic-bezier(0.22, 1, 0.36, 1);
-            will-change: transform;
-            z-index: 3;
-          }
-
-          .auth-panel.left {
-            transform: translate3d(0, -50%, 0);
-          }
-
-          .auth-panel.right {
-            transform: translate3d(138.1%, -50%, 0);
-          }
-
-          .auth-form-side {
-            position: absolute;
-            top: 0;
-            width: 58%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 30px;
-            will-change: transform, opacity;
-            z-index: 2;
-          }
-
-          .auth-form-login {
-            left: 0;
-            transition:
-              opacity 420ms ease,
-              transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
-          }
-
-          .auth-form-register {
-            right: 0;
-            transition:
-              opacity 420ms ease,
-              transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
           }
 
           @media (max-width: 980px) {
             .auth-shell {
-              min-height: auto;
-              display: grid;
-              gap: 24px;
-            }
-
-            .auth-panel,
-            .auth-form-side {
-              position: relative;
-              top: auto;
-              left: auto !important;
-              right: auto !important;
-              width: 100%;
+              grid-template-columns: 1fr;
               height: auto;
-              transform: none !important;
-            }
-
-            .auth-panel {
-              min-height: 420px;
-              order: 2;
-            }
-
-            .auth-form-side {
-              min-height: auto;
-              padding: 10px 8px;
             }
           }
         `}
@@ -569,27 +503,50 @@ export default function AuthCard({
       <div
         style={{
           minHeight: "100vh",
+          width: "100vw",
           background: "#F4F5F7",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          alignItems: "stretch",
+          justifyContent: "stretch",
           padding: "0",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          style={{
+            position: "absolute",
+            top: "18px",
+            right: "22px",
+            zIndex: 20,
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            border: "1px solid rgba(10,38,69,0.14)",
+            background: "#FFFFFF",
+            color: "#0A2645",
+            fontSize: "22px",
+            lineHeight: 1,
+            cursor: "pointer",
+            boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
+          }}
+        >
+          ×
+        </button>
+
         <div className="auth-shell">
           <div
-            className="auth-form-side auth-form-login"
             style={{
-              opacity: mode === "login" ? 1 : 0,
-              transform:
-                mode === "login"
-                  ? "translate3d(0, 0, 0) scale(1)"
-                  : "translate3d(-36px, 0, 0) scale(0.985)",
-              pointerEvents: mode === "login" ? "auto" : "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px",
             }}
           >
             <AuthForm
-              mode="login"
+              mode={mode}
               lang={lang}
               loading={loading}
               loginForm={loginForm}
@@ -602,30 +559,10 @@ export default function AuthCard({
           </div>
 
           <div
-            className="auth-form-side auth-form-register"
             style={{
-              opacity: mode === "register" ? 1 : 0,
-              transform:
-                mode === "register"
-                  ? "translate3d(0, 0, 0) scale(1)"
-                  : "translate3d(36px, 0, 0) scale(0.985)",
-              pointerEvents: mode === "register" ? "auto" : "none",
+              minHeight: "100%",
             }}
           >
-            <AuthForm
-              mode="register"
-              lang={lang}
-              loading={loading}
-              loginForm={loginForm}
-              setLoginForm={setLoginForm}
-              registerForm={registerForm}
-              setRegisterForm={setRegisterForm}
-              onLoginSubmit={handleLoginSubmit}
-              onRegisterSubmit={handleRegisterSubmit}
-            />
-          </div>
-
-          <div className={`auth-panel ${panelOnLeft ? "left" : "right"}`}>
             <SidePanel mode={mode} onSwitch={switchMode} lang={lang} />
           </div>
         </div>

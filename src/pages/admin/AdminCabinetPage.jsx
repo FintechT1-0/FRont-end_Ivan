@@ -3,20 +3,10 @@ import { useNavigate } from "react-router-dom";
 import client from "../../api/client";
 import { useLang } from "../../context/LanguageContext";
 
-const topButtonStyle = {
-  minWidth: "78px",
-  height: "28px",
-  borderRadius: "999px",
-  border: "none",
-  fontSize: "11px",
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
 function getLocalizedCourseTitle(course, lang) {
   return lang === "ua"
-    ? course.title_ua || course.title_en || "Course"
-    : course.title_en || course.title_ua || "Course";
+    ? course.title_ua || course.title_en || "Course name"
+    : course.title_en || course.title_ua || "Course name";
 }
 
 function normalizeCoursesResponse(payload) {
@@ -35,6 +25,22 @@ function normalizeCoursesResponse(payload) {
     current_page: payload?.current_page || 1,
     total_courses: payload?.total_courses || 0,
   };
+}
+
+function formatSections(course) {
+  if (typeof course?.sections_count === "number") {
+    return `${course.sections_count} Sections`;
+  }
+
+  return `${course?.tags?.length || 0} Sections`;
+}
+
+function formatStudents(course) {
+  if (typeof course?.students_count === "number") {
+    return `${course.students_count} students`;
+  }
+
+  return "0 students";
 }
 
 export default function AdminCoursesPage() {
@@ -57,32 +63,32 @@ export default function AdminCoursesPage() {
   const t = useMemo(() => {
     return {
       title: lang === "ua" ? "УСІ КУРСИ" : "ALL COURSES",
-      search: lang === "ua" ? "Пошук" : "Search",
-      category: lang === "ua" ? "Категорія" : "Category",
-      status: lang === "ua" ? "Статус" : "Status",
+      search: lang === "ua" ? "ПОШУК" : "SEARCH",
+      category: lang === "ua" ? "УСІ КАТЕГОРІЇ..." : "ALL CATEGORIES...",
+      all: lang === "ua" ? "УСІ СТАТУСИ..." : "ALL STATUSES...",
+      published: "Published",
+      unpublished: "Unpublished",
       create: lang === "ua" ? "+ Створити курс" : "+ Create course",
       saveDraft: lang === "ua" ? "ЧЕРНЕТКА" : "SAVE DRAFT",
       preview: lang === "ua" ? "ПЕРЕГЛЯД" : "PREVIEW",
       publish: lang === "ua" ? "ПУБЛІКАЦІЯ" : "PUBLISH",
       reset: lang === "ua" ? "СКИДАННЯ" : "RESET",
-      courseName: lang === "ua" ? "Назва курсу" : "Course name",
-      sections: lang === "ua" ? "Секції" : "Sections",
-      students: lang === "ua" ? "Студенти" : "Students",
-      published: lang === "ua" ? "Опубліковано" : "Published",
-      unpublished: lang === "ua" ? "Неопубліковано" : "Unpublished",
       noCourses: lang === "ua" ? "Курсів не знайдено" : "No courses found",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
-      all: lang === "ua" ? "Усі" : "All",
-      edit: lang === "ua" ? "Редагувати" : "Edit",
-      delete: lang === "ua" ? "Видалити" : "Delete",
-      yes: lang === "ua" ? "Так" : "Yes",
-      no: lang === "ua" ? "Ні" : "No",
       prev: lang === "ua" ? "Назад" : "Prev",
       next: lang === "ua" ? "Далі" : "Next",
       deleteConfirm:
         lang === "ua"
           ? "Точно видалити цей курс?"
           : "Are you sure you want to delete this course?",
+      deleteFail:
+        lang === "ua"
+          ? "Не вдалося видалити курс"
+          : "Failed to delete course",
+      updateFail:
+        lang === "ua"
+          ? "Не вдалося оновити курс"
+          : "Failed to update course",
     };
   }, [lang]);
 
@@ -142,7 +148,7 @@ export default function AdminCoursesPage() {
       await loadCourses(page);
     } catch (error) {
       console.error("Failed to delete course:", error);
-      alert(lang === "ua" ? "Не вдалося видалити курс" : "Failed to delete course");
+      alert(t.deleteFail);
     } finally {
       setBusyId(null);
     }
@@ -157,21 +163,26 @@ export default function AdminCoursesPage() {
       await loadCourses(page);
     } catch (error) {
       console.error("Failed to update course:", error);
-      alert(lang === "ua" ? "Не вдалося оновити курс" : "Failed to update course");
+      alert(t.updateFail);
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <div>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+      }}
+    >
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-end",
           gap: "18px",
-          marginBottom: "18px",
+          marginBottom: "14px",
           flexWrap: "wrap",
         }}
       >
@@ -179,8 +190,8 @@ export default function AdminCoursesPage() {
           style={{
             margin: 0,
             color: "#FFFFFF",
-            fontSize: "36px",
-            lineHeight: 1.1,
+            fontSize: "22px",
+            lineHeight: 1,
             fontWeight: 700,
             letterSpacing: "0.02em",
           }}
@@ -191,21 +202,21 @@ export default function AdminCoursesPage() {
         <div
           style={{
             display: "flex",
-            gap: "10px",
+            alignItems: "center",
+            gap: "18px",
             flexWrap: "wrap",
-            color: "#FFFFFF",
           }}
         >
-          <button style={{ ...topButtonStyle, background: "transparent", color: "#FFFFFF" }}>
+          <button type="button" style={topActionButton}>
             {t.saveDraft}
           </button>
-          <button style={{ ...topButtonStyle, background: "transparent", color: "#FFFFFF" }}>
+          <button type="button" style={topActionButton}>
             {t.preview}
           </button>
-          <button style={{ ...topButtonStyle, background: "transparent", color: "#FFFFFF" }}>
+          <button type="button" style={topActionButton}>
             {t.publish}
           </button>
-          <button style={{ ...topButtonStyle, background: "transparent", color: "#FFFFFF" }}>
+          <button type="button" style={topActionButton}>
             {t.reset}
           </button>
         </div>
@@ -216,58 +227,34 @@ export default function AdminCoursesPage() {
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr auto",
-          gap: "12px",
+          gap: "10px",
           alignItems: "center",
-          marginBottom: "14px",
+          marginBottom: "16px",
         }}
       >
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t.search}
-          style={{
-            height: "28px",
-            borderRadius: "999px",
-            border: "none",
-            outline: "none",
-            padding: "0 12px",
-            fontSize: "11px",
-            background: "#FFFFFF",
-            color: "#20324A",
-          }}
-        />
+        <div style={searchWrapStyle}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t.search}
+            style={filterStyle}
+          />
+          <span style={searchIconStyle}>⌕</span>
+        </div>
 
         <input
           type="text"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           placeholder={t.category}
-          style={{
-            height: "28px",
-            borderRadius: "999px",
-            border: "none",
-            outline: "none",
-            padding: "0 12px",
-            fontSize: "11px",
-            background: "#FFFFFF",
-            color: "#20324A",
-          }}
+          style={filterStyle}
         />
 
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          style={{
-            height: "28px",
-            borderRadius: "999px",
-            border: "none",
-            outline: "none",
-            padding: "0 12px",
-            fontSize: "11px",
-            background: "#FFFFFF",
-            color: "#20324A",
-          }}
+          style={filterStyle}
         >
           <option value="">{t.all}</option>
           <option value="published">{t.published}</option>
@@ -277,18 +264,7 @@ export default function AdminCoursesPage() {
         <button
           type="button"
           onClick={() => navigate("/admin/courses/create")}
-          style={{
-            minWidth: "120px",
-            height: "32px",
-            borderRadius: "999px",
-            border: "none",
-            background: "#B3131A",
-            color: "#FFFFFF",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: "pointer",
-            boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
-          }}
+          style={createButtonStyle}
         >
           {t.create}
         </button>
@@ -301,53 +277,57 @@ export default function AdminCoursesPage() {
         }}
       >
         {loading ? (
-          <div
-            style={{
-              borderRadius: "10px",
-              background: "rgba(255,255,255,0.85)",
-              padding: "16px",
-              color: "#20324A",
-              fontSize: "13px",
-            }}
-          >
-            {t.loading}
-          </div>
+          <div style={emptyRowStyle}>{t.loading}</div>
         ) : courses.length === 0 ? (
-          <div
-            style={{
-              borderRadius: "10px",
-              background: "rgba(255,255,255,0.85)",
-              padding: "16px",
-              color: "#20324A",
-              fontSize: "13px",
-            }}
-          >
-            {t.noCourses}
-          </div>
+          <div style={emptyRowStyle}>{t.noCourses}</div>
         ) : (
           courses.map((course) => (
             <div
               key={course.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "2fr 0.8fr 0.8fr 1fr auto",
-                gap: "12px",
+                gridTemplateColumns: "2.3fr 0.9fr 0.9fr 1fr auto",
+                gap: "10px",
                 alignItems: "center",
-                minHeight: "36px",
-                borderRadius: "999px",
-                background: "rgba(255,255,255,0.88)",
-                padding: "0 14px",
+                minHeight: "28px",
+                borderRadius: "4px",
+                background: "rgba(255,255,255,0.96)",
+                padding: "0 12px",
                 color: "#20324A",
-                fontSize: "11px",
+                fontSize: "9px",
               }}
             >
-              <div style={{ fontWeight: 500 }}>
-                {getLocalizedCourseTitle(course, lang)}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  minWidth: 0,
+                }}
+              >
+                <span
+                  style={{
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "50%",
+                    background: "#D3D8E0",
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontWeight: 500,
+                  }}
+                >
+                  {getLocalizedCourseTitle(course, lang)}
+                </span>
               </div>
 
-              <div>{course.tags?.length || 0} {t.sections}</div>
-
-              <div>{course.price ?? 0} USD</div>
+              <div style={{ color: "#6C7480" }}>{formatSections(course)}</div>
+              <div style={{ color: "#6C7480" }}>{formatStudents(course)}</div>
 
               <button
                 type="button"
@@ -356,31 +336,34 @@ export default function AdminCoursesPage() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: "7px",
                   border: "none",
                   background: "transparent",
                   cursor: "pointer",
-                  color: "#20324A",
+                  color: "#6C7480",
                   justifySelf: "start",
+                  padding: 0,
+                  fontSize: "9px",
                 }}
               >
                 <span
                   style={{
-                    width: "26px",
-                    height: "12px",
+                    width: "18px",
+                    height: "8px",
                     borderRadius: "999px",
-                    background: course.isPublished ? "#73C16B" : "#C7CCD3",
+                    background: course.isPublished ? "#78B66A" : "#CFCFCF",
                     position: "relative",
                     display: "inline-block",
+                    flexShrink: 0,
                   }}
                 >
                   <span
                     style={{
                       position: "absolute",
-                      top: "2px",
-                      left: course.isPublished ? "14px" : "2px",
-                      width: "8px",
-                      height: "8px",
+                      top: "1px",
+                      left: course.isPublished ? "10px" : "1px",
+                      width: "6px",
+                      height: "6px",
                       borderRadius: "50%",
                       background: "#FFFFFF",
                       transition: "left 0.2s ease",
@@ -388,7 +371,7 @@ export default function AdminCoursesPage() {
                   />
                 </span>
 
-                <span>
+                <span style={{ color: "#7A7F87" }}>
                   {course.isPublished ? t.published : t.unpublished}
                 </span>
               </button>
@@ -397,36 +380,34 @@ export default function AdminCoursesPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
+                  gap: "8px",
                   justifySelf: "end",
                 }}
               >
                 <button
                   type="button"
                   onClick={() => navigate(`/admin/courses/${course.id}`)}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                  title={t.edit}
+                  style={iconButtonStyle}
+                  title="Edit"
                 >
-                  ✎
+                  ○
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/courses/${course.id}`)}
+                  style={iconButtonStyle}
+                  title="View"
+                >
+                  ◔
                 </button>
 
                 <button
                   type="button"
                   disabled={busyId === course.id}
                   onClick={() => handleDelete(course.id)}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    color: "#B3131A",
-                  }}
-                  title={t.delete}
+                  style={{ ...iconButtonStyle, color: "#B3131A" }}
+                  title="Delete"
                 >
                   🗑
                 </button>
@@ -441,35 +422,24 @@ export default function AdminCoursesPage() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "16px",
+          marginTop: "14px",
           color: "#FFFFFF",
-          fontSize: "12px",
+          fontSize: "11px",
         }}
       >
-        <div>
-          {meta.total_courses}
-        </div>
+        <div>{meta.total_courses}</div>
 
         <div
           style={{
             display: "flex",
-            gap: "10px",
+            gap: "8px",
           }}
         >
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => loadCourses(page - 1)}
-            style={{
-              minWidth: "76px",
-              height: "30px",
-              borderRadius: "999px",
-              border: "1px solid rgba(255,255,255,0.2)",
-              background: "transparent",
-              color: "#FFFFFF",
-              cursor: page <= 1 ? "default" : "pointer",
-              opacity: page <= 1 ? 0.45 : 1,
-            }}
+            style={pageButtonStyle(page <= 1)}
           >
             {t.prev}
           </button>
@@ -478,16 +448,7 @@ export default function AdminCoursesPage() {
             type="button"
             disabled={page >= meta.total_pages}
             onClick={() => loadCourses(page + 1)}
-            style={{
-              minWidth: "76px",
-              height: "30px",
-              borderRadius: "999px",
-              border: "1px solid rgba(255,255,255,0.2)",
-              background: "transparent",
-              color: "#FFFFFF",
-              cursor: page >= meta.total_pages ? "default" : "pointer",
-              opacity: page >= meta.total_pages ? 0.45 : 1,
-            }}
+            style={pageButtonStyle(page >= meta.total_pages)}
           >
             {t.next}
           </button>
@@ -495,4 +456,86 @@ export default function AdminCoursesPage() {
       </div>
     </div>
   );
+}
+
+const topActionButton = {
+  border: "none",
+  background: "transparent",
+  color: "#FFFFFF",
+  fontSize: "9px",
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
+  opacity: 0.95,
+};
+
+const searchWrapStyle = {
+  position: "relative",
+  display: "flex",
+  alignItems: "center",
+};
+
+const searchIconStyle = {
+  position: "absolute",
+  right: "10px",
+  fontSize: "10px",
+  color: "#A0A7B2",
+  pointerEvents: "none",
+};
+
+const filterStyle = {
+  width: "100%",
+  height: "24px",
+  borderRadius: "999px",
+  border: "none",
+  outline: "none",
+  padding: "0 10px",
+  fontSize: "9px",
+  background: "#FFFFFF",
+  color: "#20324A",
+};
+
+const createButtonStyle = {
+  height: "28px",
+  minWidth: "102px",
+  borderRadius: "999px",
+  border: "none",
+  background: "#B3131A",
+  color: "#FFFFFF",
+  fontSize: "10px",
+  fontWeight: 600,
+  cursor: "pointer",
+  boxShadow: "0 10px 18px rgba(179,19,26,0.22)",
+};
+
+const emptyRowStyle = {
+  borderRadius: "6px",
+  background: "rgba(255,255,255,0.94)",
+  padding: "14px 14px",
+  color: "#20324A",
+  fontSize: "12px",
+};
+
+const iconButtonStyle = {
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: "11px",
+  lineHeight: 1,
+  padding: 0,
+  color: "#8B9199",
+};
+
+function pageButtonStyle(disabled) {
+  return {
+    minWidth: "68px",
+    height: "26px",
+    borderRadius: "999px",
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "transparent",
+    color: "#FFFFFF",
+    cursor: disabled ? "default" : "pointer",
+    opacity: disabled ? 0.45 : 1,
+    fontSize: "10px",
+  };
 }
