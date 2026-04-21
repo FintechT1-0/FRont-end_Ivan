@@ -1,16 +1,21 @@
 import client from "./client";
 
-function toNumberOrUndef(v) {
-  if (v === "" || v === null || v === undefined) return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
+function toNumberOrUndef(value) {
+  if (value === "" || value === null || value === undefined) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
 }
 
-function normalizeNullableString(v) {
-  if (v === undefined) return undefined;
-  if (v === null) return null;
-  const s = String(v).trim();
-  return s === "" ? null : s;
+function normalizeOptionalString(value) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const stringValue = String(value).trim();
+  return stringValue === "" ? null : stringValue;
+}
+
+function normalizeRequiredString(value) {
+  return String(value ?? "").trim();
 }
 
 export async function getCourses(params = {}) {
@@ -39,14 +44,15 @@ export async function getCourses(params = {}) {
 
   const min = toNumberOrUndef(priceMin ?? price_min);
   const max = toNumberOrUndef(priceMax ?? price_max);
+
   if (typeof min === "number") query.price_min = min;
   if (typeof max === "number") query.price_max = max;
 
-  if (typeof isPublished === "boolean") query.isPublished = isPublished;
+  if (typeof isPublished === "boolean") {
+    query.isPublished = isPublished;
+  }
 
-  if (Array.isArray(tags) && tags.length) {
-    // FastAPI: repeated query params ?tags=a&tags=b
-    // axios зазвичай ок, якщо бекенд приймає tags як array
+  if (Array.isArray(tags) && tags.length > 0) {
     query.tags = tags;
   }
 
@@ -64,20 +70,18 @@ export async function getCourseById(id) {
 
 export async function createCourse(payload = {}) {
   const clean = {
-    ...payload,
-    title_ua: normalizeNullableString(payload.title_ua),
-    title_en: normalizeNullableString(payload.title_en),
-    description_ua: normalizeNullableString(payload.description_ua),
-    description_en: normalizeNullableString(payload.description_en),
-    category: normalizeNullableString(payload.category),
-    durationText: normalizeNullableString(payload.durationText),
-    link: normalizeNullableString(payload.link),
-    speaker: normalizeNullableString(payload.speaker),
-    image: normalizeNullableString(payload.image),
-    // price: тільки число або 0
+    title_ua: normalizeRequiredString(payload.title_ua),
+    title_en: normalizeRequiredString(payload.title_en),
+    description_ua: normalizeRequiredString(payload.description_ua),
+    description_en: normalizeRequiredString(payload.description_en),
+    category: normalizeRequiredString(payload.category),
+    tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [],
+    durationText: normalizeRequiredString(payload.durationText),
     price: toNumberOrUndef(payload.price) ?? 0,
-    // tags: якщо порожній масив — краще не слати (або слати [])
-    tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : payload.tags,
+    link: normalizeOptionalString(payload.link),
+    speaker: normalizeOptionalString(payload.speaker),
+    image: normalizeOptionalString(payload.image),
+    isPublished: Boolean(payload.isPublished),
   };
 
   const { data } = await client.post("/courses/", clean);
@@ -85,29 +89,54 @@ export async function createCourse(payload = {}) {
 }
 
 export async function updateCourse(id, payload = {}) {
-  const clean = {
-    ...payload,
-    ...(payload.title_ua !== undefined && { title_ua: normalizeNullableString(payload.title_ua) }),
-    ...(payload.title_en !== undefined && { title_en: normalizeNullableString(payload.title_en) }),
-    ...(payload.description_ua !== undefined && {
-      description_ua: normalizeNullableString(payload.description_ua),
-    }),
-    ...(payload.description_en !== undefined && {
-      description_en: normalizeNullableString(payload.description_en),
-    }),
-    ...(payload.category !== undefined && { category: normalizeNullableString(payload.category) }),
-    ...(payload.durationText !== undefined && { durationText: normalizeNullableString(payload.durationText) }),
-    ...(payload.link !== undefined && { link: normalizeNullableString(payload.link) }),
-    ...(payload.speaker !== undefined && { speaker: normalizeNullableString(payload.speaker) }),
-    ...(payload.image !== undefined && { image: normalizeNullableString(payload.image) }),
-  };
+  const clean = {};
+
+  if (payload.title_ua !== undefined) {
+    clean.title_ua = normalizeOptionalString(payload.title_ua);
+  }
+
+  if (payload.title_en !== undefined) {
+    clean.title_en = normalizeOptionalString(payload.title_en);
+  }
+
+  if (payload.description_ua !== undefined) {
+    clean.description_ua = normalizeOptionalString(payload.description_ua);
+  }
+
+  if (payload.description_en !== undefined) {
+    clean.description_en = normalizeOptionalString(payload.description_en);
+  }
+
+  if (payload.category !== undefined) {
+    clean.category = normalizeOptionalString(payload.category);
+  }
+
+  if (payload.durationText !== undefined) {
+    clean.durationText = normalizeOptionalString(payload.durationText);
+  }
+
+  if (payload.link !== undefined) {
+    clean.link = normalizeOptionalString(payload.link);
+  }
+
+  if (payload.speaker !== undefined) {
+    clean.speaker = normalizeOptionalString(payload.speaker);
+  }
+
+  if (payload.image !== undefined) {
+    clean.image = normalizeOptionalString(payload.image);
+  }
 
   if (payload.price !== undefined) {
     clean.price = toNumberOrUndef(payload.price) ?? 0;
   }
 
   if (payload.tags !== undefined) {
-    clean.tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : payload.tags;
+    clean.tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [];
+  }
+
+  if (payload.isPublished !== undefined) {
+    clean.isPublished = Boolean(payload.isPublished);
   }
 
   const { data } = await client.patch(`/courses/${id}`, clean);
