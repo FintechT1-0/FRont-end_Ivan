@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getCourses } from "../api/courses";
 import SafeImage from "../components/SafeImage";
 import { useLang } from "../context/LanguageContext";
@@ -55,40 +56,74 @@ function getLocalizedDescription(course, lang) {
   return course?.description_en || course?.description_ua || "";
 }
 
-function trimText(text = "", max = 140) {
+function trimText(text = "", max = 150) {
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max).trim()}...` : text;
 }
 
-function matchesSearch(course, query, lang) {
-  if (!query) return true;
+function getAllCategories(courses) {
+  return [...new Set(courses.map((course) => course.category).filter(Boolean))];
+}
 
-  const q = query.toLowerCase();
+function getAllTags(courses) {
+  return [...new Set(courses.flatMap((course) => course.tags || []).filter(Boolean))];
+}
 
+function courseMatchesFilters(course, filters, lang) {
   const title = getLocalizedTitle(course, lang).toLowerCase();
   const description = getLocalizedDescription(course, lang).toLowerCase();
   const category = (course?.category || "").toLowerCase();
   const speaker = (course?.speaker || "").toLowerCase();
-  const tags = Array.isArray(course?.tags)
-    ? course.tags.join(" ").toLowerCase()
-    : "";
+  const tags = Array.isArray(course?.tags) ? course.tags : [];
+  const tagsText = tags.join(" ").toLowerCase();
+  const price = Number(course?.price || 0);
+
+  const query = filters.search.trim().toLowerCase();
+
+  const matchesSearch =
+    !query ||
+    title.includes(query) ||
+    description.includes(query) ||
+    category.includes(query) ||
+    speaker.includes(query) ||
+    tagsText.includes(query);
+
+  const matchesCategory =
+    !filters.category || course?.category === filters.category;
+
+  const matchesTag =
+    !filters.tag || tags.includes(filters.tag);
+
+  const matchesPriceMin =
+    filters.priceMin === "" || price >= Number(filters.priceMin);
+
+  const matchesPriceMax =
+    filters.priceMax === "" || price <= Number(filters.priceMax);
 
   return (
-    title.includes(q) ||
-    description.includes(q) ||
-    category.includes(q) ||
-    speaker.includes(q) ||
-    tags.includes(q)
+    matchesSearch &&
+    matchesCategory &&
+    matchesTag &&
+    matchesPriceMin &&
+    matchesPriceMax
   );
 }
 
 export default function CoursesPage() {
   const { lang } = useLang();
+  const navigate = useNavigate();
 
   const [courses, setCourses] = useState([]);
-  const [search, setSearch] = useState("");
   const [errorText, setErrorText] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const [filters, setFilters] = useState({
+    search: "",
+    category: "",
+    tag: "",
+    priceMin: "",
+    priceMax: "",
+  });
 
   const t = useMemo(() => {
     return {
@@ -105,6 +140,11 @@ export default function CoursesPage() {
           : "Не вдалося завантажити курси",
       search: lang === "en" ? "Search courses..." : "Пошук курсів...",
       category: lang === "en" ? "Category" : "Категорія",
+      allCategories: lang === "en" ? "All categories" : "Усі категорії",
+      tag: lang === "en" ? "Tag" : "Тег",
+      allTags: lang === "en" ? "All tags" : "Усі теги",
+      priceMin: lang === "en" ? "Min price" : "Мін. ціна",
+      priceMax: lang === "en" ? "Max price" : "Макс. ціна",
       duration: lang === "en" ? "Duration" : "Тривалість",
       speaker: lang === "en" ? "Speaker" : "Спікер",
       price: lang === "en" ? "Price" : "Ціна",
@@ -113,6 +153,11 @@ export default function CoursesPage() {
         lang === "en"
           ? "Course link unavailable"
           : "Посилання на курс недоступне",
+      reset: lang === "en" ? "Reset filters" : "Скинути фільтри",
+      noResults:
+        lang === "en"
+          ? "No courses match your filters"
+          : "Немає курсів за цими фільтрами",
     };
   }, [lang]);
 
@@ -127,7 +172,7 @@ export default function CoursesPage() {
         const data = await getCourses({
           isPublished: true,
           page: 1,
-          page_size: 50,
+          page_size: 100,
         });
 
         if (!active) return;
@@ -152,10 +197,29 @@ export default function CoursesPage() {
     };
   }, [t.error]);
 
+  const categories = useMemo(() => getAllCategories(courses), [courses]);
+  const tags = useMemo(() => getAllTags(courses), [courses]);
+
   const filteredCourses = useMemo(() => {
-    const query = search.trim();
-    return courses.filter((course) => matchesSearch(course, query, lang));
-  }, [courses, search, lang]);
+    return courses.filter((course) => courseMatchesFilters(course, filters, lang));
+  }, [courses, filters, lang]);
+
+  function updateFilter(name, value) {
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  function resetFilters() {
+    setFilters({
+      search: "",
+      category: "",
+      tag: "",
+      priceMin: "",
+      priceMax: "",
+    });
+  }
 
   if (loading) {
     return (
@@ -172,17 +236,90 @@ export default function CoursesPage() {
       </div>
 
       <div className="max-w-6xl mx-auto mb-8">
-        <div
-          style={glassCard}
-          className="rounded-full px-4 h-[44px] flex items-center"
-        >
-          <input
-            type="text"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t.search}
-            className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/60"
-          />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div
+            style={glassCard}
+            className="rounded-full px-4 h-[44px] flex items-center xl:col-span-2"
+          >
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(event) => updateFilter("search", event.target.value)}
+              placeholder={t.search}
+              className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/60"
+            />
+          </div>
+
+          <select
+            value={filters.category}
+            onChange={(event) => updateFilter("category", event.target.value)}
+            style={glassCard}
+            className="rounded-full px-4 h-[44px] text-sm text-white bg-transparent outline-none"
+          >
+            <option value="" className="text-black">
+              {t.allCategories}
+            </option>
+            {categories.map((category) => (
+              <option key={category} value={category} className="text-black">
+                {category}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.tag}
+            onChange={(event) => updateFilter("tag", event.target.value)}
+            style={glassCard}
+            className="rounded-full px-4 h-[44px] text-sm text-white bg-transparent outline-none"
+          >
+            <option value="" className="text-black">
+              {t.allTags}
+            </option>
+            {tags.map((tag) => (
+              <option key={tag} value={tag} className="text-black">
+                {tag}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            style={glassCard}
+            className="rounded-full px-4 h-[44px] text-sm text-white"
+          >
+            {t.reset}
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 mt-4 max-w-[520px]">
+          <div
+            style={glassCard}
+            className="rounded-full px-4 h-[44px] flex items-center"
+          >
+            <input
+              type="number"
+              min="0"
+              value={filters.priceMin}
+              onChange={(event) => updateFilter("priceMin", event.target.value)}
+              placeholder={t.priceMin}
+              className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/60"
+            />
+          </div>
+
+          <div
+            style={glassCard}
+            className="rounded-full px-4 h-[44px] flex items-center"
+          >
+            <input
+              type="number"
+              min="0"
+              value={filters.priceMax}
+              onChange={(event) => updateFilter("priceMax", event.target.value)}
+              placeholder={t.priceMax}
+              className="w-full bg-transparent outline-none text-sm text-white placeholder:text-white/60"
+            />
+          </div>
         </div>
       </div>
 
@@ -192,7 +329,7 @@ export default function CoursesPage() {
         </div>
       ) : filteredCourses.length === 0 ? (
         <div className="max-w-6xl mx-auto text-center text-white/70">
-          {t.empty}
+          {courses.length === 0 ? t.empty : t.noResults}
         </div>
       ) : (
         <div className="max-w-6xl mx-auto grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -246,18 +383,24 @@ export default function CoursesPage() {
                         : t.free}
                     </span>
                   </div>
+
+                  {Array.isArray(course.tags) && course.tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {course.tags.slice(0, 4).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 rounded-full text-[10px] bg-white/10 text-white"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mt-6 flex justify-center">
                   <button
-                    onClick={() => {
-                      if (course.link) {
-                        window.open(course.link, "_blank", "noopener,noreferrer");
-                        return;
-                      }
-
-                      alert(t.noLink);
-                    }}
+                    onClick={() => navigate(`/courses/${course.id}`)}
                     className="px-6 py-2 rounded-full text-sm font-medium text-white"
                     style={{
                       background: "#B3131A",
