@@ -17,11 +17,47 @@ function getBackendError(error, fallback) {
   return fallback;
 }
 
-function formatResponse(text) {
+function normalizeAssistantText(text) {
   return String(text || "")
-    .split("\n")
+    .replace(/\r/g, "")
+    .replace(/\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$2")
+    .replace(/\[(https?:\/\/[^\]]+)\]/g, "$1")
+    .trim();
+}
+
+function splitIntoBlocks(text) {
+  return normalizeAssistantText(text)
+    .split(/\n\s*\n/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function renderTextWithLinks(text) {
+  const normalized = normalizeAssistantText(text);
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = normalized.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      return (
+        <a
+          key={`${part}-${index}`}
+          href={part}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            color: "#FFFFFF",
+            textDecoration: "underline",
+            wordBreak: "break-all",
+          }}
+        >
+          {part}
+        </a>
+      );
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
 }
 
 export default function InsightsAssistant({ open, onClose }) {
@@ -39,11 +75,11 @@ export default function InsightsAssistant({ open, onClose }) {
       subtitle:
         lang === "ua"
           ? "Опиши тему або запит. Асистент підбере 3 найбільш змістовні інсайти."
-          : "Describe a topic or query. The assistant will select 3 most relevant insights.",
+          : "Describe a topic or query. The assistant will select 3 most meaningful insights.",
       placeholder:
         lang === "ua"
-          ? "Наприклад: штучний інтелект у фінансах, кібербезпека банків, новини про цифрові активи..."
-          : "For example: AI in finance, banking cybersecurity, digital assets news...",
+          ? "Наприклад: криптовалюта, цифрові активи, регулювання, штучний інтелект у фінансах..."
+          : "For example: cryptocurrency, digital assets, regulation, AI in finance...",
       send: lang === "ua" ? "Отримати підбірку" : "Get recommendations",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
       close: lang === "ua" ? "Закрити" : "Close",
@@ -99,11 +135,11 @@ export default function InsightsAssistant({ open, onClose }) {
     }
   }
 
-  const responseBlocks = formatResponse(responseText);
+  const responseBlocks = splitIntoBlocks(responseText);
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
-      <div className="w-full max-w-3xl rounded-[28px] overflow-hidden bg-[#082947] text-white shadow-[0_24px_70px_rgba(0,0,0,0.35)] border border-white/10">
+      <div className="w-full max-w-3xl rounded-[28px] overflow-hidden bg-[#082947] text-white shadow-[0_24px_70px_rgba(0,0,0,0.35)] border border-white/10 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
           <div>
             <div className="text-lg md:text-xl font-semibold">{t.title}</div>
@@ -119,7 +155,7 @@ export default function InsightsAssistant({ open, onClose }) {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto">
           {!isAuthorized ? (
             <div
               className="rounded-[22px] p-6"
@@ -211,9 +247,14 @@ export default function InsightsAssistant({ open, onClose }) {
                 >
                   <div className="text-base font-semibold mb-3">{t.resultTitle}</div>
 
-                  <div className="grid gap-3 text-sm leading-7 text-white/90">
+                  <div className="grid gap-4 text-sm leading-7 text-white/90">
                     {responseBlocks.map((block, index) => (
-                      <p key={`${block}-${index}`}>{block}</p>
+                      <div
+                        key={`${block}-${index}`}
+                        className="rounded-[16px] bg-white/5 p-4 border border-white/8"
+                      >
+                        {renderTextWithLinks(block)}
+                      </div>
                     ))}
                   </div>
                 </div>

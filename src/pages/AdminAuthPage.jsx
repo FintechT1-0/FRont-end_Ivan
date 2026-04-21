@@ -1,81 +1,243 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useLang } from "../context/LanguageContext";
-import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { registerUser, loginUser } from "../../api/auth";
+import { useAuth } from "../../context/AuthContext";
+import { useLang } from "../../context/LanguageContext";
+
+function getBackendError(error, fallback) {
+  const detail = error?.response?.data?.detail;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((item) => item.msg).join(", ");
+  }
+
+  return fallback;
+}
+
+const fieldStyle = {
+  width: "100%",
+  height: "48px",
+  border: "none",
+  outline: "none",
+  borderRadius: "999px",
+  background: "#E9EEF4",
+  padding: "0 16px",
+  fontSize: "14px",
+  color: "#18324B",
+};
 
 export default function AdminAuthPage() {
   const { lang } = useLang();
-  const { register, login } = useAuth();
+  const { refreshMe } = useAuth();
   const navigate = useNavigate();
 
-  const [name, setName] = useState("");
-  const [surname, setSurname] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
+  const [form, setForm] = useState({
+    name: "",
+    surname: "",
+    email: "",
+    password: "",
+    admin_password: "",
+  });
 
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
 
-  const t = useMemo(() => {
-    return {
-      title: lang === "en" ? "Admin Sign Up" : "Реєстрація адміна",
-      name: lang === "en" ? "Name" : "Ім’я",
-      surname: lang === "en" ? "Surname" : "Прізвище",
-      email: lang === "en" ? "E-mail" : "E-mail",
-      password: lang === "en" ? "Password" : "Пароль",
-      adminPass: lang === "en" ? "Admin password" : "Admin password",
-      btn: lang === "en" ? "Sign Up (Admin)" : "Зареєструвати адміна",
-      invalidAdmin: lang === "en" ? "Provided admin password is invalid." : "Невірний admin password.",
-      emailUsed: lang === "en" ? "This email is already in use." : "Ця пошта вже використовується.",
-      backLogin: lang === "en" ? "Back to Sign In" : "Назад до входу",
-    };
-  }, [lang]);
+  const t = {
+    title: lang === "ua" ? "РЕЄСТРАЦІЯ АДМІНА" : "ADMIN SIGN UP",
+    subtitle:
+      lang === "ua"
+        ? "Доступ до цієї форми мають лише члени команди з admin password"
+        : "This form requires a valid admin password",
+    name: lang === "ua" ? "Ім'я" : "Name",
+    surname: lang === "ua" ? "Прізвище" : "Surname",
+    email: "Email",
+    password: lang === "ua" ? "Пароль" : "Password",
+    adminPassword: lang === "ua" ? "Admin password" : "Admin password",
+    submit: lang === "ua" ? "Створити акаунт адміна" : "Create admin account",
+    back: lang === "ua" ? "Назад" : "Back",
+    fail:
+      lang === "ua"
+        ? "Не вдалося зареєструвати адміністратора"
+        : "Failed to register admin",
+  };
 
-  async function onSubmit(e) {
-    e.preventDefault();
-    setErr("");
-    setLoading(true);
+  function setField(name, value) {
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
     try {
-      await register({ name, surname, email, password, admin_password: adminPassword });
-      const data = await login({ email, password });
-      if (data?.user?.role === "admin") navigate("/admin", { replace: true });
-      else navigate("/cabinet", { replace: true });
-    } catch (e2) {
-      console.error(e2);
-      const status = e2?.response?.status;
-      if (status === 403) setErr(t.invalidAdmin);
-      else if (status === 400) setErr(t.emailUsed);
-      else setErr("Error");
+      setLoading(true);
+
+      await registerUser(form);
+      const loginData = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (loginData?.token) {
+        localStorage.setItem("token", loginData.token);
+      }
+
+      const me = await refreshMe();
+
+      if (me?.role === "admin") {
+        navigate("/admin");
+        return;
+      }
+
+      alert(lang === "ua" ? "Користувач створений, але роль не admin" : "User created, but role is not admin");
+    } catch (error) {
+      alert(getBackendError(error, t.fail));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-[90vh] bg-[#0E3A73] text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-md bg-white/10 rounded-3xl p-8">
-        <h1 className="text-3xl font-semibold">{t.title}</h1>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#082947",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "520px",
+          borderRadius: "28px",
+          padding: "28px",
+          background:
+            "linear-gradient(180deg, rgba(19,54,90,0.78) 0%, rgba(10,37,67,0.88) 100%)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
+          color: "#FFFFFF",
+        }}
+      >
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "30px",
+            lineHeight: 1.15,
+            fontWeight: 700,
+          }}
+        >
+          {t.title}
+        </h1>
 
-        {err ? <div className="mt-4 bg-red-500/15 border border-red-400/30 rounded-xl p-3 text-sm">{err}</div> : null}
+        <p
+          style={{
+            margin: "10px 0 22px",
+            color: "rgba(255,255,255,0.78)",
+            fontSize: "14px",
+            lineHeight: 1.6,
+          }}
+        >
+          {t.subtitle}
+        </p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <input className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none" placeholder={t.name} value={name} onChange={(e) => setName(e.target.value)} required />
-          <input className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none" placeholder={t.surname} value={surname} onChange={(e) => setSurname(e.target.value)} required />
-          <input className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none" placeholder={t.email} value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-          <input className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none" placeholder={t.password} value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={8} />
-          <input className="w-full h-11 rounded-xl bg-white/10 px-4 outline-none" placeholder={t.adminPass} value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} type="password" required />
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: "grid",
+            gap: "12px",
+          }}
+        >
+          <input
+            value={form.name}
+            onChange={(e) => setField("name", e.target.value)}
+            placeholder={t.name}
+            style={fieldStyle}
+          />
 
-          <button disabled={loading} className="w-full h-11 rounded-xl bg-[#A94F5E] hover:opacity-90 disabled:opacity-60 transition" type="submit">
-            {t.btn}
-          </button>
+          <input
+            value={form.surname}
+            onChange={(e) => setField("surname", e.target.value)}
+            placeholder={t.surname}
+            style={fieldStyle}
+          />
+
+          <input
+            value={form.email}
+            onChange={(e) => setField("email", e.target.value)}
+            placeholder={t.email}
+            type="email"
+            style={fieldStyle}
+          />
+
+          <input
+            value={form.password}
+            onChange={(e) => setField("password", e.target.value)}
+            placeholder={t.password}
+            type="password"
+            style={fieldStyle}
+          />
+
+          <input
+            value={form.admin_password}
+            onChange={(e) => setField("admin_password", e.target.value)}
+            placeholder={t.adminPassword}
+            type="password"
+            style={fieldStyle}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "6px",
+            }}
+          >
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                minWidth: "180px",
+                height: "42px",
+                border: "none",
+                borderRadius: "999px",
+                background: "#B3131A",
+                color: "#FFFFFF",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
+              }}
+            >
+              {loading ? "..." : t.submit}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              style={{
+                minWidth: "100px",
+                height: "42px",
+                border: "1px solid rgba(255,255,255,0.16)",
+                borderRadius: "999px",
+                background: "transparent",
+                color: "#FFFFFF",
+                fontSize: "14px",
+                cursor: "pointer",
+              }}
+            >
+              {t.back}
+            </button>
+          </div>
         </form>
-
-        <div className="mt-6 text-sm text-white/85">
-          <Link to="/login" className="underline">
-            {t.backLogin}
-          </Link>
-        </div>
       </div>
     </div>
   );

@@ -2,52 +2,43 @@ import { useEffect, useMemo, useState } from "react";
 import client from "../../api/client";
 import { useLang } from "../../context/LanguageContext";
 
-const cardGlass = {
-  background:
-    "linear-gradient(180deg, rgba(8,38,72,0.98) 0%, rgba(6,31,59,0.98) 100%)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 30px rgba(0,0,0,0.16)",
-};
+function getBackendError(error, fallback) {
+  const detail = error?.response?.data?.detail;
 
-const blockGlass = {
-  background:
-    "linear-gradient(180deg, rgba(245,247,250,0.96) 0%, rgba(239,243,248,0.96) 100%)",
-  border: "1px solid rgba(8,38,72,0.06)",
-  boxShadow: "0 14px 28px rgba(0,0,0,0.10)",
-};
-
-function formatHour(isoString) {
-  try {
-    const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hour = String(date.getHours()).padStart(2, "0");
-    return `${year}-${month}-${day} ${hour}:00`;
-  } catch {
-    return isoString;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
   }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((item) => item.msg).join(", ");
+  }
+
+  return fallback;
 }
 
-function buildRows(distributionMap) {
+function buildDistributionRows(distributionMap) {
   return Object.entries(distributionMap || {})
-    .sort((a, b) => new Date(b[0]) - new Date(a[0]))
-    .map(([date, value], index) => ({
-      id: `${date}-${index}`,
-      date,
-      label: formatHour(date),
-      activeUsers: value,
-    }));
+    .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+    .map(([timestamp, value]) => {
+      const date = new Date(timestamp);
+
+      return {
+        timestamp,
+        value,
+        label: `${String(date.getDate()).padStart(2, "0")}.${String(
+          date.getMonth() + 1
+        ).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:00`,
+      };
+    });
 }
 
-function buildCountryRows(countriesMap) {
+function buildCountriesRows(countriesMap) {
   const rows = Object.entries(countriesMap || {})
-    .sort((a, b) => b[1] - a[1])
     .map(([country, value]) => ({
       country,
       value,
-    }));
+    }))
+    .sort((a, b) => b.value - a.value);
 
   const total = rows.reduce((sum, item) => sum + item.value, 0);
 
@@ -57,38 +48,60 @@ function buildCountryRows(countriesMap) {
   }));
 }
 
+function buildLinePoints(rows, width = 760, height = 220) {
+  if (!rows.length) return "";
+
+  const maxValue = Math.max(...rows.map((item) => item.value), 1);
+  const stepX = rows.length > 1 ? width / (rows.length - 1) : width / 2;
+
+  return rows
+    .map((item, index) => {
+      const x = index * stepX;
+      const y = height - (item.value / maxValue) * (height - 24) - 12;
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
 export default function AdminActivityPage() {
   const { lang } = useLang();
 
+  const [loading, setLoading] = useState(true);
   const [since, setSince] = useState(7);
   const [distribution, setDistribution] = useState({});
   const [countries, setCountries] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [errorText, setErrorText] = useState("");
 
   const t = useMemo(() => {
     return {
       title: lang === "ua" ? "АКТИВНІСТЬ" : "ACTIVITY",
-      searchPlaceholder: lang === "ua" ? "Пошук..." : "Search...",
+      subtitle:
+        lang === "ua"
+          ? "Телеметрія активних користувачів"
+          : "Active users telemetry",
       period: lang === "ua" ? "Період" : "Period",
-      recentActivity: lang === "ua" ? "Журнал активності" : "Activity Log",
-      countries: lang === "ua" ? "Країни" : "Countries",
-      time: lang === "ua" ? "Час" : "Time",
-      users: lang === "ua" ? "Активні користувачі" : "Active users",
-      totalRecords: lang === "ua" ? "Записів" : "Records",
-      topCountry: lang === "ua" ? "Топ країна" : "Top country",
-      peakHour: lang === "ua" ? "Пік активності" : "Peak hour",
-      noData: lang === "ua" ? "Немає даних" : "No data",
+      days7: lang === "ua" ? "7 днів" : "7 days",
+      days14: lang === "ua" ? "14 днів" : "14 days",
+      days30: lang === "ua" ? "30 днів" : "30 days",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
-      days: lang === "ua" ? "днів" : "days",
+      noData: lang === "ua" ? "Немає даних" : "No data",
+      chart: lang === "ua" ? "Активні користувачі" : "Active users",
+      countries: lang === "ua" ? "Країни" : "Countries",
+      users: lang === "ua" ? "користувачів" : "users",
+      fail:
+        lang === "ua"
+          ? "Не вдалося завантажити телеметрію"
+          : "Failed to load telemetry",
     };
   }, [lang]);
 
   useEffect(() => {
     let active = true;
 
-    async function loadActivity() {
+    async function loadData() {
       try {
         setLoading(true);
+        setErrorText("");
 
         const { data } = await client.get("/telemetry/distribution", {
           params: { since },
@@ -99,345 +112,274 @@ export default function AdminActivityPage() {
         setDistribution(data?.distribution || {});
         setCountries(data?.countries || {});
       } catch (error) {
-        console.error("Failed to load activity:", error);
-
         if (!active) return;
 
         setDistribution({});
         setCountries({});
+        setErrorText(getBackendError(error, t.fail));
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    loadActivity();
+    loadData();
 
     return () => {
       active = false;
     };
-  }, [since]);
+  }, [since, t.fail]);
 
-  const rows = useMemo(() => buildRows(distribution), [distribution]);
-  const countryRows = useMemo(() => buildCountryRows(countries), [countries]);
-
-  const peakHour = useMemo(() => {
-    if (!rows.length) return "-";
-    const top = [...rows].sort((a, b) => b.activeUsers - a.activeUsers)[0];
-    return top?.label || "-";
-  }, [rows]);
-
-  const topCountry = useMemo(() => {
-    if (!countryRows.length) return "-";
-    return countryRows[0]?.country || "-";
-  }, [countryRows]);
+  const rows = useMemo(() => buildDistributionRows(distribution), [distribution]);
+  const countriesRows = useMemo(() => buildCountriesRows(countries), [countries]);
+  const polylinePoints = useMemo(() => buildLinePoints(rows), [rows]);
 
   return (
-    <div>
+    <div style={{ width: "100%", maxWidth: "930px" }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
-          gap: "18px",
-          marginBottom: "20px",
+          alignItems: "flex-end",
+          gap: "16px",
+          marginBottom: "16px",
           flexWrap: "wrap",
         }}
       >
-        <h1
-          style={{
-            margin: 0,
-            color: "#FFFFFF",
-            fontSize: "36px",
-            lineHeight: 1.1,
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {t.title}
-        </h1>
-
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "420px",
-            height: "34px",
-            borderRadius: "999px",
-            background: "#173B66",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 14px",
-            color: "rgba(255,255,255,0.72)",
-            border: "1px solid rgba(255,255,255,0.05)",
-          }}
-        >
-          <input
-            type="text"
-            placeholder={t.searchPlaceholder}
+        <div>
+          <h1
             style={{
-              width: "100%",
-              height: "100%",
-              border: "none",
-              outline: "none",
-              background: "transparent",
+              margin: 0,
               color: "#FFFFFF",
-              fontSize: "13px",
-            }}
-          />
-          <span style={{ fontSize: "12px" }}>⌕</span>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr)) auto",
-          gap: "14px",
-          alignItems: "stretch",
-          marginBottom: "20px",
-        }}
-      >
-        <div
-          style={{
-            ...cardGlass,
-            borderRadius: "8px",
-            minHeight: "92px",
-            padding: "12px",
-            color: "#FFFFFF",
-          }}
-        >
-          <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "14px" }}>
-            {t.totalRecords}
-          </div>
-          <div style={{ fontSize: "28px", fontWeight: 700 }}>
-            {rows.length}
-          </div>
-        </div>
-
-        <div
-          style={{
-            ...cardGlass,
-            borderRadius: "8px",
-            minHeight: "92px",
-            padding: "12px",
-            color: "#FFFFFF",
-          }}
-        >
-          <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "14px" }}>
-            {t.topCountry}
-          </div>
-          <div style={{ fontSize: "20px", fontWeight: 700 }}>
-            {topCountry}
-          </div>
-        </div>
-
-        <div
-          style={{
-            ...cardGlass,
-            borderRadius: "8px",
-            minHeight: "92px",
-            padding: "12px",
-            color: "#FFFFFF",
-          }}
-        >
-          <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "14px" }}>
-            {t.peakHour}
-          </div>
-          <div style={{ fontSize: "18px", fontWeight: 700 }}>
-            {peakHour}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "end",
-          }}
-        >
-          <select
-            value={since}
-            onChange={(e) => setSince(Number(e.target.value))}
-            style={{
-              height: "34px",
-              minWidth: "110px",
-              borderRadius: "999px",
-              border: "none",
-              outline: "none",
-              padding: "0 12px",
-              fontSize: "12px",
-              color: "#20324A",
-              background: "#FFFFFF",
+              fontSize: "18px",
+              lineHeight: 1,
+              fontWeight: 700,
+              letterSpacing: "0.02em",
             }}
           >
-            <option value={1}>1 {t.days}</option>
-            <option value={3}>3 {t.days}</option>
-            <option value={7}>7 {t.days}</option>
-            <option value={14}>14 {t.days}</option>
-            <option value={30}>30 {t.days}</option>
-          </select>
+            {t.title}
+          </h1>
+
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: "rgba(255,255,255,0.75)",
+              fontSize: "12px",
+            }}
+          >
+            {t.subtitle}
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "#FFFFFF",
+          }}
+        >
+          <span style={{ fontSize: "11px" }}>{t.period}</span>
+
+          <button type="button" onClick={() => setSince(7)} style={periodButtonStyle(since === 7)}>
+            {t.days7}
+          </button>
+
+          <button type="button" onClick={() => setSince(14)} style={periodButtonStyle(since === 14)}>
+            {t.days14}
+          </button>
+
+          <button type="button" onClick={() => setSince(30)} style={periodButtonStyle(since === 30)}>
+            {t.days30}
+          </button>
         </div>
       </div>
 
       {loading ? (
-        <div
-          style={{
-            ...blockGlass,
-            borderRadius: "18px",
-            padding: "30px",
-            textAlign: "center",
-            color: "#082947",
-          }}
-        >
-          {t.loading}
-        </div>
+        <div style={panelStyle}>{t.loading}</div>
+      ) : errorText ? (
+        <div style={panelStyle}>{errorText}</div>
       ) : (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 250px",
-            gap: "14px",
+            gridTemplateColumns: "2fr 1fr",
+            gap: "16px",
             alignItems: "start",
           }}
         >
-          <div>
+          <div style={panelStyle}>
             <div
               style={{
-                ...blockGlass,
-                borderRadius: "8px 8px 0 0",
-                minHeight: "32px",
-                padding: "8px 12px",
-                color: "#082947",
-                fontSize: "12px",
+                color: "#20324A",
+                fontSize: "13px",
                 fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
+                marginBottom: "14px",
               }}
             >
-              {t.recentActivity}
+              {t.chart}
             </div>
 
-            <div
-              style={{
-                background: "rgba(255,255,255,0.55)",
-                borderRadius: "0 0 8px 8px",
-                overflow: "hidden",
-                border: "1px solid rgba(8,38,72,0.06)",
-              }}
-            >
+            {rows.length === 0 ? (
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.8fr 1fr",
-                  gap: "12px",
-                  padding: "6px 12px",
-                  fontSize: "11px",
-                  color: "#6C7480",
-                  background: "rgba(255,255,255,0.55)",
-                  borderBottom: "1px solid rgba(8,38,72,0.08)",
+                  minHeight: "260px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6F7A89",
+                  fontSize: "12px",
                 }}
               >
-                <div>{t.time}</div>
-                <div>{t.users}</div>
+                {t.noData}
               </div>
+            ) : (
+              <>
+                <svg
+                  width="100%"
+                  viewBox="0 0 760 240"
+                  preserveAspectRatio="none"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "240px",
+                  }}
+                >
+                  <line x1="0" y1="228" x2="760" y2="228" stroke="#D6DCE5" strokeWidth="1" />
+                  <polyline
+                    fill="none"
+                    stroke="#0F2F52"
+                    strokeWidth="4"
+                    points={polylinePoints}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
 
-              <div
-                style={{
-                  minHeight: "320px",
-                  background: "rgba(255,255,255,0.76)",
-                  padding: "8px 0",
-                }}
-              >
-                {rows.length === 0 ? (
-                  <div
-                    style={{
-                      height: "280px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#6C7480",
-                      fontSize: "13px",
-                    }}
-                  >
-                    {t.noData}
-                  </div>
-                ) : (
-                  rows.map((row) => (
-                    <div
-                      key={row.id}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.8fr 1fr",
-                        gap: "12px",
-                        padding: "10px 12px",
-                        fontSize: "12px",
-                        color: "#20324A",
-                        borderBottom: "1px solid rgba(8,38,72,0.06)",
-                      }}
-                    >
-                      <div>{row.label}</div>
-                      <div>{row.activeUsers}</div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "8px 12px",
+                    marginTop: "12px",
+                  }}
+                >
+                  {rows.slice(-6).map((row) => (
+                    <div key={row.timestamp}>
+                      <div
+                        style={{
+                          color: "#7D8796",
+                          fontSize: "10px",
+                          marginBottom: "2px",
+                        }}
+                      >
+                        {row.label}
+                      </div>
+                      <div
+                        style={{
+                          color: "#20324A",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {row.value} {t.users}
+                      </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          <div
-            style={{
-              ...blockGlass,
-              borderRadius: "8px",
-              minHeight: "360px",
-              padding: "12px",
-            }}
-          >
+          <div style={panelStyle}>
             <div
               style={{
-                marginBottom: "12px",
-                color: "#082947",
-                fontSize: "12px",
+                color: "#20324A",
+                fontSize: "13px",
                 fontWeight: 600,
+                marginBottom: "14px",
               }}
             >
               {t.countries}
             </div>
 
-            <div style={{ display: "grid", gap: "10px" }}>
-              {countryRows.length === 0 ? (
-                <div
-                  style={{
-                    color: "#6C7480",
-                    fontSize: "12px",
-                    textAlign: "center",
-                    paddingTop: "20px",
-                  }}
-                >
-                  {t.noData}
-                </div>
-              ) : (
-                countryRows.map((item) => (
-                  <div
-                    key={item.country}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto auto",
-                      gap: "10px",
-                      alignItems: "center",
-                      fontSize: "12px",
-                      color: "#20324A",
-                      padding: "8px 0",
-                      borderBottom: "1px solid rgba(8,38,72,0.06)",
-                    }}
-                  >
-                    <div>{item.country}</div>
-                    <div>{item.value}</div>
-                    <div>{item.percent}%</div>
+            {countriesRows.length === 0 ? (
+              <div
+                style={{
+                  minHeight: "260px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#6F7A89",
+                  fontSize: "12px",
+                }}
+              >
+                {t.noData}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {countriesRows.map((item) => (
+                  <div key={item.country}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "10px",
+                        marginBottom: "6px",
+                        color: "#20324A",
+                        fontSize: "11px",
+                      }}
+                    >
+                      <span>{item.country}</span>
+                      <span>{item.percent}%</span>
+                    </div>
+
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "10px",
+                        borderRadius: "999px",
+                        background: "#E8ECF2",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${item.percent}%`,
+                          height: "100%",
+                          borderRadius: "999px",
+                          background: "#0F2F52",
+                        }}
+                      />
+                    </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
     </div>
   );
+}
+
+const panelStyle = {
+  background: "rgba(255,255,255,0.96)",
+  borderRadius: "10px",
+  padding: "16px",
+  minHeight: "320px",
+};
+
+function periodButtonStyle(active) {
+  return {
+    minWidth: "68px",
+    height: "28px",
+    borderRadius: "999px",
+    border: active ? "none" : "1px solid rgba(255,255,255,0.18)",
+    background: active ? "#B3131A" : "transparent",
+    color: "#FFFFFF",
+    fontSize: "10px",
+    fontWeight: 600,
+    cursor: "pointer",
+    boxShadow: active ? "0 8px 16px rgba(179,19,26,0.22)" : "none",
+  };
 }

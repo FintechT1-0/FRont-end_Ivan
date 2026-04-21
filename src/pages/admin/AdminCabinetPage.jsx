@@ -1,541 +1,149 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import client from "../../api/client";
 import { useLang } from "../../context/LanguageContext";
 
-function getLocalizedCourseTitle(course, lang) {
-  return lang === "ua"
-    ? course.title_ua || course.title_en || "Course name"
-    : course.title_en || course.title_ua || "Course name";
-}
+function getBackendError(error, fallback) {
+  const detail = error?.response?.data?.detail;
 
-function normalizeCoursesResponse(payload) {
-  if (Array.isArray(payload)) {
-    return {
-      courses: payload,
-      total_pages: 1,
-      current_page: 1,
-      total_courses: payload.length,
-    };
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
   }
 
-  return {
-    courses: payload?.courses || [],
-    total_pages: payload?.total_pages || 1,
-    current_page: payload?.current_page || 1,
-    total_courses: payload?.total_courses || 0,
-  };
-}
-
-function formatSections(course) {
-  if (typeof course?.sections_count === "number") {
-    return `${course.sections_count} Sections`;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((item) => item.msg).join(", ");
   }
 
-  return `${course?.tags?.length || 0} Sections`;
+  return fallback;
 }
 
-function formatStudents(course) {
-  if (typeof course?.students_count === "number") {
-    return `${course.students_count} students`;
-  }
-
-  return "0 students";
-}
-
-export default function AdminCoursesPage() {
+export default function AdminCabinetPage() {
   const { lang } = useLang();
-  const navigate = useNavigate();
 
-  const [courses, setCourses] = useState([]);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
-  const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState({
-    total_pages: 1,
-    current_page: 1,
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total_users: 0,
+    active_users: 0,
     total_courses: 0,
   });
-  const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState(null);
+  const [errorText, setErrorText] = useState("");
 
   const t = useMemo(() => {
     return {
-      title: lang === "ua" ? "УСІ КУРСИ" : "ALL COURSES",
-      search: lang === "ua" ? "ПОШУК" : "SEARCH",
-      category: lang === "ua" ? "УСІ КАТЕГОРІЇ..." : "ALL CATEGORIES...",
-      all: lang === "ua" ? "УСІ СТАТУСИ..." : "ALL STATUSES...",
-      published: "Published",
-      unpublished: "Unpublished",
-      create: lang === "ua" ? "+ Створити курс" : "+ Create course",
-      saveDraft: lang === "ua" ? "ЧЕРНЕТКА" : "SAVE DRAFT",
-      preview: lang === "ua" ? "ПЕРЕГЛЯД" : "PREVIEW",
-      publish: lang === "ua" ? "ПУБЛІКАЦІЯ" : "PUBLISH",
-      reset: lang === "ua" ? "СКИДАННЯ" : "RESET",
-      noCourses: lang === "ua" ? "Курсів не знайдено" : "No courses found",
+      title: lang === "ua" ? "ПАНЕЛЬ" : "DASHBOARD",
+      users: lang === "ua" ? "Користувачі" : "Users",
+      activeUsers: lang === "ua" ? "Активні користувачі" : "Active users",
+      courses: lang === "ua" ? "Курси" : "Courses",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
-      prev: lang === "ua" ? "Назад" : "Prev",
-      next: lang === "ua" ? "Далі" : "Next",
-      deleteConfirm:
+      fail:
         lang === "ua"
-          ? "Точно видалити цей курс?"
-          : "Are you sure you want to delete this course?",
-      deleteFail:
-        lang === "ua"
-          ? "Не вдалося видалити курс"
-          : "Failed to delete course",
-      updateFail:
-        lang === "ua"
-          ? "Не вдалося оновити курс"
-          : "Failed to update course",
+          ? "Не вдалося завантажити статистику"
+          : "Failed to load stats",
     };
   }, [lang]);
 
-  async function loadCourses(nextPage = page) {
-    try {
-      setLoading(true);
-
-      const params = {
-        page: nextPage,
-        page_size: 20,
-      };
-
-      if (search.trim()) params.title = search.trim();
-      if (category.trim()) params.category = category.trim();
-      if (status === "published") params.isPublished = true;
-      if (status === "unpublished") params.isPublished = false;
-
-      const { data } = await client.get("/courses/", { params });
-      const normalized = normalizeCoursesResponse(data);
-
-      setCourses(normalized.courses);
-      setMeta({
-        total_pages: normalized.total_pages,
-        current_page: normalized.current_page,
-        total_courses: normalized.total_courses,
-      });
-      setPage(normalized.current_page);
-    } catch (error) {
-      console.error("Failed to load admin courses:", error);
-      setCourses([]);
-      setMeta({
-        total_pages: 1,
-        current_page: 1,
-        total_courses: 0,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    loadCourses(1);
-  }, []);
+    let active = true;
 
-  async function handleFilterSubmit(event) {
-    event.preventDefault();
-    await loadCourses(1);
-  }
+    async function loadStats() {
+      try {
+        setLoading(true);
+        setErrorText("");
 
-  async function handleDelete(courseId) {
-    const ok = window.confirm(t.deleteConfirm);
-    if (!ok) return;
+        const { data } = await client.get("/telemetry/numerical");
+        if (!active) return;
 
-    try {
-      setBusyId(courseId);
-      await client.delete(`/courses/${courseId}`);
-      await loadCourses(page);
-    } catch (error) {
-      console.error("Failed to delete course:", error);
-      alert(t.deleteFail);
-    } finally {
-      setBusyId(null);
+        setStats(
+          data || {
+            total_users: 0,
+            active_users: 0,
+            total_courses: 0,
+          }
+        );
+      } catch (error) {
+        if (!active) return;
+        setErrorText(getBackendError(error, t.fail));
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  }
 
-  async function handleTogglePublish(course) {
-    try {
-      setBusyId(course.id);
-      await client.patch(`/courses/${course.id}`, {
-        isPublished: !course.isPublished,
-      });
-      await loadCourses(page);
-    } catch (error) {
-      console.error("Failed to update course:", error);
-      alert(t.updateFail);
-    } finally {
-      setBusyId(null);
-    }
-  }
+    loadStats();
+
+    return () => {
+      active = false;
+    };
+  }, [t.fail]);
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "100%",
-      }}
-    >
-      <div
+    <div style={{ width: "100%", maxWidth: "930px" }}>
+      <h1
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          gap: "18px",
-          marginBottom: "14px",
-          flexWrap: "wrap",
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            color: "#FFFFFF",
-            fontSize: "22px",
-            lineHeight: 1,
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {t.title}
-        </h1>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "18px",
-            flexWrap: "wrap",
-          }}
-        >
-          <button type="button" style={topActionButton}>
-            {t.saveDraft}
-          </button>
-          <button type="button" style={topActionButton}>
-            {t.preview}
-          </button>
-          <button type="button" style={topActionButton}>
-            {t.publish}
-          </button>
-          <button type="button" style={topActionButton}>
-            {t.reset}
-          </button>
-        </div>
-      </div>
-
-      <form
-        onSubmit={handleFilterSubmit}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr auto",
-          gap: "10px",
-          alignItems: "center",
-          marginBottom: "16px",
-        }}
-      >
-        <div style={searchWrapStyle}>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t.search}
-            style={filterStyle}
-          />
-          <span style={searchIconStyle}>⌕</span>
-        </div>
-
-        <input
-          type="text"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder={t.category}
-          style={filterStyle}
-        />
-
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          style={filterStyle}
-        >
-          <option value="">{t.all}</option>
-          <option value="published">{t.published}</option>
-          <option value="unpublished">{t.unpublished}</option>
-        </select>
-
-        <button
-          type="button"
-          onClick={() => navigate("/admin/courses/create")}
-          style={createButtonStyle}
-        >
-          {t.create}
-        </button>
-      </form>
-
-      <div
-        style={{
-          display: "grid",
-          gap: "8px",
-        }}
-      >
-        {loading ? (
-          <div style={emptyRowStyle}>{t.loading}</div>
-        ) : courses.length === 0 ? (
-          <div style={emptyRowStyle}>{t.noCourses}</div>
-        ) : (
-          courses.map((course) => (
-            <div
-              key={course.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "2.3fr 0.9fr 0.9fr 1fr auto",
-                gap: "10px",
-                alignItems: "center",
-                minHeight: "28px",
-                borderRadius: "4px",
-                background: "rgba(255,255,255,0.96)",
-                padding: "0 12px",
-                color: "#20324A",
-                fontSize: "9px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  minWidth: 0,
-                }}
-              >
-                <span
-                  style={{
-                    width: "4px",
-                    height: "4px",
-                    borderRadius: "50%",
-                    background: "#D3D8E0",
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontWeight: 500,
-                  }}
-                >
-                  {getLocalizedCourseTitle(course, lang)}
-                </span>
-              </div>
-
-              <div style={{ color: "#6C7480" }}>{formatSections(course)}</div>
-              <div style={{ color: "#6C7480" }}>{formatStudents(course)}</div>
-
-              <button
-                type="button"
-                disabled={busyId === course.id}
-                onClick={() => handleTogglePublish(course)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  color: "#6C7480",
-                  justifySelf: "start",
-                  padding: 0,
-                  fontSize: "9px",
-                }}
-              >
-                <span
-                  style={{
-                    width: "18px",
-                    height: "8px",
-                    borderRadius: "999px",
-                    background: course.isPublished ? "#78B66A" : "#CFCFCF",
-                    position: "relative",
-                    display: "inline-block",
-                    flexShrink: 0,
-                  }}
-                >
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "1px",
-                      left: course.isPublished ? "10px" : "1px",
-                      width: "6px",
-                      height: "6px",
-                      borderRadius: "50%",
-                      background: "#FFFFFF",
-                      transition: "left 0.2s ease",
-                    }}
-                  />
-                </span>
-
-                <span style={{ color: "#7A7F87" }}>
-                  {course.isPublished ? t.published : t.unpublished}
-                </span>
-              </button>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  justifySelf: "end",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/courses/${course.id}`)}
-                  style={iconButtonStyle}
-                  title="Edit"
-                >
-                  ○
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/courses/${course.id}`)}
-                  style={iconButtonStyle}
-                  title="View"
-                >
-                  ◔
-                </button>
-
-                <button
-                  type="button"
-                  disabled={busyId === course.id}
-                  onClick={() => handleDelete(course.id)}
-                  style={{ ...iconButtonStyle, color: "#B3131A" }}
-                  title="Delete"
-                >
-                  🗑
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "14px",
+          margin: "0 0 18px",
           color: "#FFFFFF",
-          fontSize: "11px",
+          fontSize: "18px",
+          lineHeight: 1,
+          fontWeight: 700,
+          letterSpacing: "0.02em",
         }}
       >
-        <div>{meta.total_courses}</div>
+        {t.title}
+      </h1>
 
+      {loading ? (
+        <div style={panelStyle}>{t.loading}</div>
+      ) : errorText ? (
+        <div style={panelStyle}>{errorText}</div>
+      ) : (
         <div
           style={{
-            display: "flex",
-            gap: "8px",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "14px",
           }}
         >
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => loadCourses(page - 1)}
-            style={pageButtonStyle(page <= 1)}
-          >
-            {t.prev}
-          </button>
+          <div style={cardStyle}>
+            <div style={labelStyle}>{t.users}</div>
+            <div style={valueStyle}>{stats.total_users}</div>
+          </div>
 
-          <button
-            type="button"
-            disabled={page >= meta.total_pages}
-            onClick={() => loadCourses(page + 1)}
-            style={pageButtonStyle(page >= meta.total_pages)}
-          >
-            {t.next}
-          </button>
+          <div style={cardStyle}>
+            <div style={labelStyle}>{t.activeUsers}</div>
+            <div style={valueStyle}>{stats.active_users}</div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={labelStyle}>{t.courses}</div>
+            <div style={valueStyle}>{stats.total_courses}</div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-const topActionButton = {
-  border: "none",
-  background: "transparent",
-  color: "#FFFFFF",
-  fontSize: "9px",
-  fontWeight: 600,
-  cursor: "pointer",
-  padding: 0,
-  opacity: 0.95,
-};
-
-const searchWrapStyle = {
-  position: "relative",
-  display: "flex",
-  alignItems: "center",
-};
-
-const searchIconStyle = {
-  position: "absolute",
-  right: "10px",
-  fontSize: "10px",
-  color: "#A0A7B2",
-  pointerEvents: "none",
-};
-
-const filterStyle = {
-  width: "100%",
-  height: "24px",
-  borderRadius: "999px",
-  border: "none",
-  outline: "none",
-  padding: "0 10px",
-  fontSize: "9px",
-  background: "#FFFFFF",
-  color: "#20324A",
-};
-
-const createButtonStyle = {
-  height: "28px",
-  minWidth: "102px",
-  borderRadius: "999px",
-  border: "none",
-  background: "#B3131A",
-  color: "#FFFFFF",
-  fontSize: "10px",
-  fontWeight: 600,
-  cursor: "pointer",
-  boxShadow: "0 10px 18px rgba(179,19,26,0.22)",
-};
-
-const emptyRowStyle = {
-  borderRadius: "6px",
-  background: "rgba(255,255,255,0.94)",
-  padding: "14px 14px",
+const panelStyle = {
+  borderRadius: "10px",
+  background: "rgba(255,255,255,0.96)",
+  padding: "16px",
   color: "#20324A",
   fontSize: "12px",
 };
 
-const iconButtonStyle = {
-  border: "none",
-  background: "transparent",
-  cursor: "pointer",
-  fontSize: "11px",
-  lineHeight: 1,
-  padding: 0,
-  color: "#8B9199",
+const cardStyle = {
+  borderRadius: "10px",
+  background: "#082947",
+  color: "#FFFFFF",
+  minHeight: "106px",
+  padding: "16px",
 };
 
-function pageButtonStyle(disabled) {
-  return {
-    minWidth: "68px",
-    height: "26px",
-    borderRadius: "999px",
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "transparent",
-    color: "#FFFFFF",
-    cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.45 : 1,
-    fontSize: "10px",
-  };
-}
+const labelStyle = {
+  fontSize: "12px",
+  opacity: 0.9,
+  marginBottom: "12px",
+};
+
+const valueStyle = {
+  fontSize: "30px",
+  fontWeight: 700,
+};
