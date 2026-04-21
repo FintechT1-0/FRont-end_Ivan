@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { getInsightsEn, getInsightsUa } from "../api/insights";
 import { useLang } from "../context/LanguageContext";
 import SafeImage from "../components/SafeImage";
-import InsightsAssistant from "../components/InsightsAssistant";
 
 const glassCard = {
   background:
@@ -70,7 +69,6 @@ function TopInsightLarge({ item }) {
           padding: "16px",
           color: "#FFFFFF",
           minHeight: "100%",
-          transition: "transform 0.2s ease",
           cursor: "pointer",
         }}
       >
@@ -388,7 +386,6 @@ export default function InsightsPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState("");
-  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -549,33 +546,6 @@ export default function InsightsPage() {
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginBottom: "24px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setAssistantOpen(true)}
-              style={{
-                background: "#B3131A",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "999px",
-                minHeight: "42px",
-                padding: "0 18px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
-              }}
-            >
-              {lang === "ua" ? "AI-асистент" : "AI assistant"}
-            </button>
-          </div>
-
           {loading ? (
             <div
               style={{
@@ -692,11 +662,6 @@ export default function InsightsPage() {
           )}
         </section>
       </div>
-
-      <InsightsAssistant
-        open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-      />
     </div>
   );
 }
