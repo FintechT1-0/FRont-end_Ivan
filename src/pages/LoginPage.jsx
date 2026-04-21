@@ -5,6 +5,20 @@ import { loginUser } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LanguageContext";
 
+function getBackendError(error, fallback) {
+  const detail = error?.response?.data?.detail;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail.map((item) => item.msg).join(", ");
+  }
+
+  return fallback;
+}
+
 export default function LoginPage() {
   const { lang } = useLang();
   const { refreshMe } = useAuth();
@@ -32,8 +46,12 @@ export default function LoginPage() {
 
       navigate(next);
     } catch (error) {
-      console.error(error);
-      alert(lang === "ua" ? "Не вдалося увійти" : "Failed to sign in");
+      alert(
+        getBackendError(
+          error,
+          lang === "ua" ? "Не вдалося увійти" : "Failed to sign in"
+        )
+      );
     } finally {
       setLoading(false);
     }

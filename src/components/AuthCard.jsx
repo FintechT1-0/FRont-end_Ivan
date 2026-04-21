@@ -77,12 +77,10 @@ function SidePanel({ mode, onSwitch, lang }) {
         position: "relative",
         width: "100%",
         height: "100%",
-        borderRadius: "34px",
         overflow: "hidden",
         background:
           "linear-gradient(180deg, rgba(8,38,72,1) 0%, rgba(6,31,59,1) 100%)",
         color: "#ffffff",
-        boxShadow: "0 26px 60px rgba(0,0,0,0.22)",
       }}
     >
       <FloatingShape
