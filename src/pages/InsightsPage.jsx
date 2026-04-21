@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getInsightsEn, getInsightsUa } from "../api/insights";
 import { useLang } from "../context/LanguageContext";
 import SafeImage from "../components/SafeImage";
+import InsightsAssistant from "../components/InsightsAssistant";
 
 const glassCard = {
   background:
@@ -18,6 +19,11 @@ const imagePlaceholder = {
   background: "rgba(111, 134, 164, 0.78)",
   border: "1px solid rgba(255,255,255,0.08)",
   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+};
+
+const insightsCache = {
+  ua: null,
+  en: null,
 };
 
 function trimText(text = "", max = 120) {
@@ -46,7 +52,7 @@ function buildDetailsLink(url) {
   return `/insights/details?u=${encodeURIComponent(url || "")}`;
 }
 
-function TopInsightLarge({ item, lang }) {
+function TopInsightLarge({ item }) {
   return (
     <Link
       to={buildDetailsLink(item.url)}
@@ -382,6 +388,7 @@ export default function InsightsPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState("");
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -391,10 +398,18 @@ export default function InsightsPage() {
         setLoading(true);
         setErrorText("");
 
+        if (insightsCache[lang]) {
+          setInsights(insightsCache[lang]);
+          setLoading(false);
+          return;
+        }
+
         const response = lang === "ua" ? await getInsightsUa() : await getInsightsEn();
         if (!active) return;
 
-        setInsights(normalizeInsights(response));
+        const normalized = normalizeInsights(response);
+        insightsCache[lang] = normalized;
+        setInsights(normalized);
       } catch (error) {
         console.error("Failed to load insights:", error);
         if (!active) return;
@@ -463,7 +478,7 @@ export default function InsightsPage() {
               alignItems: "flex-start",
               gap: "24px",
               flexWrap: "wrap",
-              marginBottom: "24px",
+              marginBottom: "18px",
             }}
           >
             <div>
@@ -534,6 +549,33 @@ export default function InsightsPage() {
             </div>
           </div>
 
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: "24px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setAssistantOpen(true)}
+              style={{
+                background: "#B3131A",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "999px",
+                minHeight: "42px",
+                padding: "0 18px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
+              }}
+            >
+              {lang === "ua" ? "AI-асистент" : "AI assistant"}
+            </button>
+          </div>
+
           {loading ? (
             <div
               style={{
@@ -583,7 +625,7 @@ export default function InsightsPage() {
                 }}
               >
                 <div>
-                  {firstLarge ? <TopInsightLarge item={firstLarge} lang={lang} /> : null}
+                  {firstLarge ? <TopInsightLarge item={firstLarge} /> : null}
                 </div>
 
                 <div>
@@ -621,19 +663,40 @@ export default function InsightsPage() {
                     gap: "16px",
                   }}
                 >
-                  {filteredInsights.map((item) => (
-                    <InsightListItem
-                      key={item.id}
-                      item={item}
-                      lang={lang}
-                    />
-                  ))}
+                  {restNews.length > 0 ? (
+                    restNews.map((item) => (
+                      <InsightListItem
+                        key={item.id}
+                        item={item}
+                        lang={lang}
+                      />
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        ...glassCard,
+                        borderRadius: "22px",
+                        padding: "24px",
+                        color: "#FFFFFF",
+                        textAlign: "center",
+                      }}
+                    >
+                      {lang === "ua"
+                        ? "Додаткових новин поки немає."
+                        : "No more news yet."}
+                    </div>
+                  )}
                 </div>
               </section>
             </>
           )}
         </section>
       </div>
+
+      <InsightsAssistant
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+      />
     </div>
   );
 }

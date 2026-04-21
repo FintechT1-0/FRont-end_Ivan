@@ -3,10 +3,12 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DesktopOnly from "./components/DesktopOnly";
+import GlobalAssistantLauncher from "./components/GlobalAssistantLauncher";
 
 // public pages
 import HomePage from "./pages/HomePage";
 import CoursesPage from "./pages/CoursesPage";
+import CourseDetailsPage from "./pages/CourseDetailsPage";
 import InsightsPage from "./pages/InsightsPage";
 import InsightDetailsPage from "./pages/InsightDetailsPage";
 import PartnersPage from "./pages/PartnersPage";
@@ -37,6 +39,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:id" element={<CourseDetailsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/insights/details" element={<InsightDetailsPage />} />
           <Route path="/partners" element={<PartnersPage />} />
@@ -77,6 +80,8 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      <GlobalAssistantLauncher />
     </DesktopOnly>
   );
 }
