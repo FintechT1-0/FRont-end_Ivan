@@ -16,6 +16,7 @@ import PartnersPage from "./pages/PartnersPage";
 // auth pages
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import AdminAuthPage from "./pages/AdminAuthPage";
 
 // user
 import UserLayout from "./components/UserLayout";
@@ -24,12 +25,12 @@ import UserCoursesPage from "./pages/UserCoursesPage";
 
 // admin
 import AdminPage from "./pages/admin/AdminPage";
-import AdminAuthPage from "./pages/admin/AdminAuthPage";
 import AdminCabinetPage from "./pages/admin/AdminCabinetPage";
 import AdminCoursesPage from "./pages/admin/AdminCoursesPage";
 import AdminCourseEditorPage from "./pages/admin/AdminCourseEditorPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminActivityPage from "./pages/admin/AdminActivityPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 
 export default function App() {
   return (
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="courses/:id" element={<AdminCourseEditorPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="activity" element={<AdminActivityPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

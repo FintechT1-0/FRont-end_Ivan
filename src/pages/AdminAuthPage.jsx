@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerUser, loginUser } from "../../api/auth";
-import { useAuth } from "../../context/AuthContext";
-import { useLang } from "../../context/LanguageContext";
 
-function getBackendError(error, fallback) {
+import { registerUser, loginUser } from "../api/auth";
+import { useAuth } from "../context/AuthContext";
+import { useLang } from "../context/LanguageContext";
+
+function getErrorMessage(error, fallback) {
   const detail = error?.response?.data?.detail;
 
   if (typeof detail === "string" && detail.trim()) {
@@ -15,60 +16,46 @@ function getBackendError(error, fallback) {
     return detail.map((item) => item.msg).join(", ");
   }
 
-  return fallback;
+  return error?.response?.data?.message || error?.message || fallback;
 }
 
-const fieldStyle = {
-  width: "100%",
-  height: "48px",
-  border: "none",
-  outline: "none",
-  borderRadius: "999px",
-  background: "#E9EEF4",
-  padding: "0 16px",
-  fontSize: "14px",
-  color: "#18324B",
-};
-
 export default function AdminAuthPage() {
-  const { lang } = useLang();
-  const { refreshMe } = useAuth();
   const navigate = useNavigate();
+  const { refreshMe } = useAuth();
+  const { lang } = useLang();
+
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
     surname: "",
     email: "",
     password: "",
-    admin_password: "",
+    adminPassword: "",
   });
 
-  const [loading, setLoading] = useState(false);
-
   const t = {
-    title: lang === "ua" ? "РЕЄСТРАЦІЯ АДМІНА" : "ADMIN SIGN UP",
-    subtitle:
-      lang === "ua"
-        ? "Доступ до цієї форми мають лише члени команди з admin password"
-        : "This form requires a valid admin password",
+    title: lang === "ua" ? "Адмін доступ" : "Admin access",
+    login: lang === "ua" ? "Увійти" : "Login",
+    register: lang === "ua" ? "Створити адміністратора" : "Create admin",
     name: lang === "ua" ? "Ім'я" : "Name",
     surname: lang === "ua" ? "Прізвище" : "Surname",
     email: "Email",
     password: lang === "ua" ? "Пароль" : "Password",
-    adminPassword: lang === "ua" ? "Admin password" : "Admin password",
-    submit: lang === "ua" ? "Створити акаунт адміна" : "Create admin account",
-    back: lang === "ua" ? "Назад" : "Back",
-    fail:
+    adminPassword: lang === "ua" ? "Admin пароль" : "Admin password",
+    switchToLogin: lang === "ua" ? "Вже є акаунт" : "Already have account",
+    switchToRegister: lang === "ua" ? "Створити адміна" : "Create admin",
+    error: lang === "ua" ? "Помилка" : "Error",
+    created:
       lang === "ua"
-        ? "Не вдалося зареєструвати адміністратора"
-        : "Failed to register admin",
+        ? "Адміністратора створено. Тепер увійди."
+        : "Admin created. Now sign in.",
   };
 
-  function setField(name, value) {
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  function handleChange(event) {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(event) {
@@ -77,26 +64,38 @@ export default function AdminAuthPage() {
     try {
       setLoading(true);
 
-      await registerUser(form);
-      const loginData = await loginUser({
-        email: form.email,
-        password: form.password,
-      });
+      if (isLogin) {
+        const response = await loginUser({
+          email: form.email,
+          password: form.password,
+        });
 
-      if (loginData?.token) {
-        localStorage.setItem("token", loginData.token);
+        if (response?.token) {
+          localStorage.setItem("token", response.token);
+        }
+
+        const me = await refreshMe();
+
+        if (me?.role === "admin") {
+          navigate("/admin");
+          return;
+        }
+
+        alert(lang === "ua" ? "Цей акаунт не є адміністратором" : "This account is not an admin");
+      } else {
+        await registerUser({
+          name: form.name,
+          surname: form.surname,
+          email: form.email,
+          password: form.password,
+          admin_password: form.adminPassword,
+        });
+
+        alert(t.created);
+        setIsLogin(true);
       }
-
-      const me = await refreshMe();
-
-      if (me?.role === "admin") {
-        navigate("/admin");
-        return;
-      }
-
-      alert(lang === "ua" ? "Користувач створений, але роль не admin" : "User created, but role is not admin");
     } catch (error) {
-      alert(getBackendError(error, t.fail));
+      alert(getErrorMessage(error, t.error));
     } finally {
       setLoading(false);
     }
@@ -110,135 +109,113 @@ export default function AdminAuthPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "24px",
+        padding: "16px",
       }}
     >
-      <div
+      <form
+        onSubmit={handleSubmit}
         style={{
           width: "100%",
-          maxWidth: "520px",
-          borderRadius: "28px",
-          padding: "28px",
+          maxWidth: "440px",
+          padding: "24px",
+          borderRadius: "20px",
           background:
-            "linear-gradient(180deg, rgba(19,54,90,0.78) 0%, rgba(10,37,67,0.88) 100%)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
-          color: "#FFFFFF",
+            "linear-gradient(180deg, rgba(19,54,90,0.8), rgba(10,37,67,0.9))",
+          border: "1px solid rgba(255,255,255,0.1)",
+          color: "#fff",
         }}
       >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "30px",
-            lineHeight: 1.15,
-            fontWeight: 700,
-          }}
-        >
-          {t.title}
-        </h1>
+        <h2 style={{ marginBottom: "20px" }}>{t.title}</h2>
+
+        {!isLogin && (
+          <>
+            <input
+              name="name"
+              placeholder={t.name}
+              value={form.name}
+              onChange={handleChange}
+              required
+              style={input}
+            />
+
+            <input
+              name="surname"
+              placeholder={t.surname}
+              value={form.surname}
+              onChange={handleChange}
+              required
+              style={input}
+            />
+          </>
+        )}
+
+        <input
+          name="email"
+          placeholder={t.email}
+          value={form.email}
+          onChange={handleChange}
+          required
+          type="email"
+          style={input}
+        />
+
+        <input
+          name="password"
+          type="password"
+          placeholder={t.password}
+          value={form.password}
+          onChange={handleChange}
+          required
+          style={input}
+        />
+
+        {!isLogin && (
+          <input
+            name="adminPassword"
+            type="password"
+            placeholder={t.adminPassword}
+            value={form.adminPassword}
+            onChange={handleChange}
+            required
+            style={input}
+          />
+        )}
+
+        <button type="submit" disabled={loading} style={button}>
+          {loading ? "..." : isLogin ? t.login : t.register}
+        </button>
 
         <p
           style={{
-            margin: "10px 0 22px",
-            color: "rgba(255,255,255,0.78)",
-            fontSize: "14px",
-            lineHeight: 1.6,
+            marginTop: "12px",
+            cursor: "pointer",
+            opacity: 0.8,
           }}
+          onClick={() => setIsLogin((prev) => !prev)}
         >
-          {t.subtitle}
+          {isLogin ? t.switchToRegister : t.switchToLogin}
         </p>
-
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: "grid",
-            gap: "12px",
-          }}
-        >
-          <input
-            value={form.name}
-            onChange={(e) => setField("name", e.target.value)}
-            placeholder={t.name}
-            style={fieldStyle}
-          />
-
-          <input
-            value={form.surname}
-            onChange={(e) => setField("surname", e.target.value)}
-            placeholder={t.surname}
-            style={fieldStyle}
-          />
-
-          <input
-            value={form.email}
-            onChange={(e) => setField("email", e.target.value)}
-            placeholder={t.email}
-            type="email"
-            style={fieldStyle}
-          />
-
-          <input
-            value={form.password}
-            onChange={(e) => setField("password", e.target.value)}
-            placeholder={t.password}
-            type="password"
-            style={fieldStyle}
-          />
-
-          <input
-            value={form.admin_password}
-            onChange={(e) => setField("admin_password", e.target.value)}
-            placeholder={t.adminPassword}
-            type="password"
-            style={fieldStyle}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              marginTop: "6px",
-            }}
-          >
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                minWidth: "180px",
-                height: "42px",
-                border: "none",
-                borderRadius: "999px",
-                background: "#B3131A",
-                color: "#FFFFFF",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: "0 10px 18px rgba(179,19,26,0.24)",
-              }}
-            >
-              {loading ? "..." : t.submit}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              style={{
-                minWidth: "100px",
-                height: "42px",
-                border: "1px solid rgba(255,255,255,0.16)",
-                borderRadius: "999px",
-                background: "transparent",
-                color: "#FFFFFF",
-                fontSize: "14px",
-                cursor: "pointer",
-              }}
-            >
-              {t.back}
-            </button>
-          </div>
-        </form>
-      </div>
+      </form>
     </div>
   );
 }
+
+const input = {
+  width: "100%",
+  marginBottom: "12px",
+  padding: "10px",
+  borderRadius: "10px",
+  border: "1px solid rgba(255,255,255,0.2)",
+  background: "transparent",
+  color: "#fff",
+};
+
+const button = {
+  width: "100%",
+  padding: "10px",
+  borderRadius: "10px",
+  border: "none",
+  background: "#1e88e5",
+  color: "#fff",
+  cursor: "pointer",
+};

@@ -1,98 +1,119 @@
+import { Link } from "react-router-dom";
 import Logo from "../assets/Logo.png";
+import { useLang } from "../context/LanguageContext";
+
+const glassFooter = {
+  background:
+    "linear-gradient(180deg, rgba(19, 54, 90, 0.78) 0%, rgba(10, 37, 67, 0.88) 100%)",
+  border: "1px solid rgba(255,255,255,0.10)",
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+};
+
+function FooterLink({ to, children }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        color: "rgba(255,255,255,0.86)",
+        textDecoration: "none",
+        fontSize: "14px",
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export default function Footer() {
+  const { lang } = useLang();
+
+  const t = {
+    title: "FinTech UniVerse",
+    description:
+      lang === "ua"
+        ? "Платформа для курсів, інсайтів та AI-асистента"
+        : "Platform for courses, insights and AI assistant",
+    navigation: lang === "ua" ? "Навігація" : "Navigation",
+    account: lang === "ua" ? "Акаунт" : "Account",
+    admin: lang === "ua" ? "Адмін" : "Admin",
+    home: lang === "ua" ? "Головна" : "Home",
+    courses: lang === "ua" ? "Курси" : "Courses",
+    insights: lang === "ua" ? "Інсайди" : "Insights",
+    login: lang === "ua" ? "Увійти" : "Login",
+    register: lang === "ua" ? "Реєстрація" : "Register",
+    rights:
+      lang === "ua"
+        ? "Усі права захищено"
+        : "All rights reserved",
+  };
+
   return (
     <footer
       style={{
-        background: "#0b2a45",
-        padding: "60px 20px",
+        background: "#082947",
+        padding: "32px 16px",
       }}
     >
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          borderRadius: "30px",
-          padding: "40px",
-          background:
-            "linear-gradient(180deg, rgba(20,52,86,0.95) 0%, rgba(10,35,60,0.98) 100%)",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-        }}
-      >
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr",
-            gap: "30px",
-            color: "#ffffff",
+            ...glassFooter,
+            borderRadius: "24px",
+            padding: "24px",
           }}
         >
-          <div>
-            <h3 style={{ marginBottom: "16px" }}>
-              FinTech UniVerse
-            </h3>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr 1fr",
+              gap: "24px",
+              color: "#fff",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <img src={Logo} alt="logo" style={{ width: "40px" }} />
+                <span style={{ fontWeight: 600 }}>{t.title}</span>
+              </div>
 
-            <p style={{ color: "#9db2c6", lineHeight: "1.6" }}>
-              Platform for learning fintech, exploring insights and building
-              your career path in digital finance.
-            </p>
-          </div>
-
-          <div>
-            <p style={title}>Platform</p>
-            <p style={link}>Courses</p>
-            <p style={link}>Insights</p>
-            <p style={link}>Partners</p>
-          </div>
-
-          <div>
-            <p style={title}>Resources</p>
-            <p style={link}>Documentation</p>
-            <p style={link}>Support</p>
-            <p style={link}>Privacy</p>
-          </div>
-
-          <div>
-            <p style={title}>Follow</p>
-
-            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-              <div style={icon}>IG</div>
-              <div style={icon}>FB</div>
-              <div style={icon}>X</div>
-              <div style={icon}>TG</div>
+              <p style={{ marginTop: "10px", opacity: 0.8 }}>
+                {t.description}
+              </p>
             </div>
 
-            <img
-              src={Logo}
-              alt="logo"
-              style={{ width: "60px", marginTop: "10px" }}
-            />
+            <div>
+              <p style={{ fontWeight: 600 }}>{t.navigation}</p>
+              <FooterLink to="/">{t.home}</FooterLink>
+              <br />
+              <FooterLink to="/courses">{t.courses}</FooterLink>
+              <br />
+              <FooterLink to="/insights">{t.insights}</FooterLink>
+            </div>
+
+            <div>
+              <p style={{ fontWeight: 600 }}>{t.account}</p>
+              <FooterLink to="/login">{t.login}</FooterLink>
+              <br />
+              <FooterLink to="/register">{t.register}</FooterLink>
+              <br />
+              <FooterLink to="/admin/auth">{t.admin}</FooterLink>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: "20px",
+              fontSize: "12px",
+              opacity: 0.6,
+            }}
+          >
+            © FinTech UniVerse. {t.rights}
           </div>
         </div>
       </div>
     </footer>
   );
 }
-
-const title = {
-  fontWeight: "600",
-  marginBottom: "12px",
-};
-
-const link = {
-  color: "#9db2c6",
-  marginBottom: "8px",
-  cursor: "pointer",
-};
-
-const icon = {
-  width: "32px",
-  height: "32px",
-  borderRadius: "50%",
-  background: "#B3131A",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "12px",
-  color: "#fff",
-};
