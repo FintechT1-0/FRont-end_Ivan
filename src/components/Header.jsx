@@ -3,14 +3,15 @@ import Logo from "../assets/Logo.png";
 import { useLang } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 
-function HeaderLink({ to, children }) {
+function HeaderLink({ to, children, mobile = false }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         [
-          "text-sm md:text-[15px] leading-none transition-colors duration-200",
-          isActive ? "text-white" : "text-white/80 hover:text-white",
+          mobile ? "text-[10px] leading-none" : "text-sm md:text-[15px] leading-none",
+          "transition-colors duration-200 whitespace-nowrap",
+          isActive ? "text-white font-medium" : "text-white/80 hover:text-white",
         ].join(" ")
       }
     >
@@ -27,8 +28,8 @@ export default function Header() {
   const nav = {
     main: { en: "Main", ua: "Головна" },
     courses: { en: "Courses", ua: "Курси" },
-    insights: { en: "Insights", ua: "Інсайди" },
-    partners: { en: "Partners", ua: "Партнери" },
+    insights: { en: "Insights", ua: "Insights" },
+    partners: { en: "Partners", ua: "Partners" },
     signIn: { en: "Sign In", ua: "Увійти" },
     cabinet: { en: "Cabinet", ua: "Кабінет" },
   };
@@ -61,9 +62,9 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-transparent">
-      <div className="mx-auto w-full max-w-[1280px] px-4 pt-4 md:px-6 md:pt-6">
+      <div className="mx-auto w-full max-w-[1280px] px-3 pt-3 md:px-6 md:pt-6">
         <div
-          className="relative overflow-hidden rounded-[28px] border border-white/15 px-4 py-4 md:rounded-[34px] md:px-6 md:py-5"
+          className="relative overflow-hidden rounded-[26px] border border-white/15 px-3 py-3 md:rounded-[34px] md:px-6 md:py-5"
           style={{
             background:
               "linear-gradient(180deg, rgba(22,58,94,0.92) 0%, rgba(14,43,73,0.95) 100%)",
@@ -129,10 +130,10 @@ export default function Header() {
           </div>
 
           <div className="relative md:hidden">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <NavLink
                 to="/"
-                className="flex h-[48px] w-[110px] items-center rounded-[999px] border border-white/10 pl-3"
+                className="flex h-[34px] w-[54px] shrink-0 items-center justify-center rounded-full border border-white/10"
                 style={{
                   background:
                     "linear-gradient(180deg, rgba(31,76,121,0.95) 0%, rgba(18,49,81,0.96) 100%)",
@@ -141,15 +142,30 @@ export default function Header() {
                 <img
                   src={Logo}
                   alt="FinTech UniVerse"
-                  className="h-[28px] w-auto object-contain"
+                  className="h-[16px] w-auto object-contain"
                 />
               </NavLink>
 
-              <div className="ml-auto flex items-center gap-2">
+              <nav className="flex min-w-0 flex-1 items-center justify-center gap-3">
+                <HeaderLink mobile to="/">
+                  {nav.main[lang]}
+                </HeaderLink>
+                <HeaderLink mobile to="/courses">
+                  {nav.courses[lang]}
+                </HeaderLink>
+                <HeaderLink mobile to="/insights">
+                  {nav.insights[lang]}
+                </HeaderLink>
+                <HeaderLink mobile to="/partners">
+                  {nav.partners[lang]}
+                </HeaderLink>
+              </nav>
+
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={toggleLang}
-                  className="flex h-[34px] min-w-[46px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 text-[11px] font-medium text-white"
+                  className="flex h-[30px] min-w-[34px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-2 text-[9px] font-medium text-white"
                 >
                   {lang === "en" ? "UA" : "EN"}
                 </button>
@@ -157,19 +173,12 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={goCabinet}
-                  className="flex h-[34px] items-center justify-center rounded-full bg-[#B3131A] px-4 text-[11px] font-medium text-white"
+                  className="flex h-[30px] shrink-0 items-center justify-center rounded-full bg-[#B3131A] px-3 text-[9px] font-medium text-white"
                 >
                   {user ? nav.cabinet[lang] : nav.signIn[lang]}
                 </button>
               </div>
             </div>
-
-            <nav className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-4 text-[12px]">
-              <HeaderLink to="/">{nav.main[lang]}</HeaderLink>
-              <HeaderLink to="/courses">{nav.courses[lang]}</HeaderLink>
-              <HeaderLink to="/insights">{nav.insights[lang]}</HeaderLink>
-              <HeaderLink to="/partners">{nav.partners[lang]}</HeaderLink>
-            </nav>
           </div>
         </div>
       </div>

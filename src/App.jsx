@@ -2,10 +2,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import DesktopOnly from "./components/DesktopOnly";
 import GlobalAssistantLauncher from "./components/GlobalAssistantLauncher";
 
-// public pages
 import HomePage from "./pages/HomePage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
@@ -13,17 +11,14 @@ import InsightsPage from "./pages/InsightsPage";
 import InsightDetailsPage from "./pages/InsightDetailsPage";
 import PartnersPage from "./pages/PartnersPage";
 
-// auth pages
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminAuthPage from "./pages/AdminAuthPage";
 
-// user
 import UserLayout from "./components/UserLayout";
 import UserCabinetPage from "./pages/UserCabinetPage";
 import UserCoursesPage from "./pages/UserCoursesPage";
 
-// admin
 import AdminPage from "./pages/admin/AdminPage";
 import AdminCabinetPage from "./pages/admin/AdminCabinetPage";
 import AdminCoursesPage from "./pages/admin/AdminCoursesPage";
@@ -34,7 +29,7 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 
 export default function App() {
   return (
-    <DesktopOnly>
+    <>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
@@ -82,6 +77,6 @@ export default function App() {
       </Routes>
 
       <GlobalAssistantLauncher />
-    </DesktopOnly>
+    </>
   );
 }

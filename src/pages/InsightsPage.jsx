@@ -51,6 +51,98 @@ function buildDetailsLink(url) {
   return `/insights/details?u=${encodeURIComponent(url || "")}`;
 }
 
+function MobileLeadCard({ item, lang, compact = false }) {
+  return (
+    <Link
+      to={buildDetailsLink(item.url)}
+      className="block no-underline"
+      style={{ color: "inherit" }}
+    >
+      <article
+        style={glassCard}
+        className={`overflow-hidden rounded-[22px] text-white ${
+          compact ? "p-3" : "p-3.5"
+        }`}
+      >
+        <div
+          style={imagePlaceholder}
+          className={`overflow-hidden rounded-[18px] ${
+            compact ? "h-[160px]" : "h-[185px]"
+          }`}
+        >
+          {item?.image || item?.thumbnail ? (
+            <SafeImage
+              src={item.image}
+              fallbackSrc={item.thumbnail}
+              alt={item.title}
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex min-h-[24px] items-center rounded-full bg-white/10 px-2.5 text-[10px] font-semibold text-white">
+            {trimText(item.category, compact ? 22 : 26)}
+          </span>
+
+          {item.date ? (
+            <span className="text-[10px] text-white/70">{item.date}</span>
+          ) : null}
+        </div>
+
+        <h2
+          className={`mt-3 font-semibold leading-[1.16] text-white ${
+            compact ? "text-[14px]" : "text-[16px]"
+          }`}
+        >
+          {trimText(item.title, compact ? 46 : 58)}
+        </h2>
+
+        <p
+          className={`mt-3 leading-[1.5] text-white/85 ${
+            compact ? "text-[11px]" : "text-[12px]"
+          }`}
+        >
+          {trimText(item.excerpt || item.content, compact ? 95 : 125)}
+        </p>
+
+        <div className="mt-4 text-[11px] font-semibold text-[#E8EFF7]">
+          {lang === "ua" ? "Читати деталі" : "Read details"}
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+function MobileMiniCard({ item }) {
+  return (
+    <Link
+      to={buildDetailsLink(item.url)}
+      className="block no-underline"
+      style={{ color: "inherit" }}
+    >
+      <article
+        style={glassCard}
+        className="overflow-hidden rounded-[22px] p-3"
+      >
+        <div
+          style={imagePlaceholder}
+          className="h-[118px] overflow-hidden rounded-[16px]"
+        >
+          {item?.image || item?.thumbnail ? (
+            <SafeImage
+              src={item.image}
+              fallbackSrc={item.thumbnail}
+              alt={item.title}
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
+      </article>
+    </Link>
+  );
+}
+
 function TopInsightLarge({ item }) {
   return (
     <Link
@@ -401,7 +493,8 @@ export default function InsightsPage() {
           return;
         }
 
-        const response = lang === "ua" ? await getInsightsUa() : await getInsightsEn();
+        const response =
+          lang === "ua" ? await getInsightsUa() : await getInsightsEn();
         if (!active) return;
 
         const normalized = normalizeInsights(response);
@@ -452,215 +545,319 @@ export default function InsightsPage() {
   const sideCards = filteredInsights.slice(2, 4);
   const restNews = filteredInsights.slice(4);
 
+  const pageTitle = lang === "ua" ? "Панель інсайтів" : "Insider panel";
+  const pageSubtitle =
+    lang === "ua"
+      ? "Останні fintech-інсайти, новини та оновлення"
+      : "Latest fintech insights, news and updates";
+  const noMoreText =
+    lang === "ua" ? "Додаткових новин поки немає." : "No more news yet.";
+
   return (
-    <div
-      style={{
-        background: "#082947",
-        minHeight: "100vh",
-        padding: "0 16px 32px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          paddingTop: "24px",
-        }}
-      >
-        <section style={{ paddingTop: "12px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: "24px",
-              flexWrap: "wrap",
-              marginBottom: "18px",
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  margin: 0,
-                  color: "#FFFFFF",
-                  fontSize: "42px",
-                  fontWeight: 700,
-                  lineHeight: 1.15,
-                }}
-              >
-                {lang === "ua" ? "Панель інсайтів" : "Insider panel"}
-              </h1>
-
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  color: "rgba(255,255,255,0.76)",
-                  fontSize: "16px",
-                }}
-              >
-                {lang === "ua"
-                  ? "Останні fintech-інсайти, новини та оновлення"
-                  : "Latest fintech insights, news and updates"}
-              </p>
-            </div>
-
-            <div
-              style={{
-                ...glassCard,
-                borderRadius: "999px",
-                width: "100%",
-                maxWidth: "420px",
-                height: "48px",
-                padding: "0 18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}
-            >
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={
-                  lang === "ua" ? "Пошук інсайтів..." : "Search insights..."
-                }
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: "#FFFFFF",
-                  fontSize: "14px",
-                }}
-              />
-
-              <span
-                style={{
-                  color: "rgba(255,255,255,0.70)",
-                  fontSize: "16px",
-                }}
-              >
-                ⌕
-              </span>
-            </div>
-          </div>
-
-          {loading ? (
-            <div
-              style={{
-                ...glassCard,
-                borderRadius: "24px",
-                padding: "40px 24px",
-                textAlign: "center",
-                color: "#FFFFFF",
-              }}
-            >
-              {lang === "ua" ? "Завантаження..." : "Loading..."}
-            </div>
-          ) : errorText ? (
-            <div
-              style={{
-                ...glassCard,
-                borderRadius: "24px",
-                padding: "40px 24px",
-                textAlign: "center",
-                color: "#FFFFFF",
-              }}
-            >
-              {errorText}
-            </div>
-          ) : filteredInsights.length === 0 ? (
-            <div
-              style={{
-                ...glassCard,
-                borderRadius: "24px",
-                padding: "40px 24px",
-                textAlign: "center",
-                color: "#FFFFFF",
-              }}
-            >
-              {lang === "ua"
-                ? "Інсайти не знайдено."
-                : "No insights found."}
-            </div>
-          ) : (
-            <>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1.2fr 1fr",
-                  gap: "18px",
-                  alignItems: "stretch",
-                }}
-              >
-                <div>
-                  {firstLarge ? <TopInsightLarge item={firstLarge} /> : null}
-                </div>
-
-                <div>
-                  {secondMedium ? <TopInsightMedium item={secondMedium} /> : null}
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateRows: "1fr 1fr",
-                    gap: "18px",
-                  }}
-                >
-                  {sideCards.map((item) => (
-                    <TopInsightSmall key={item.id} item={item} />
-                  ))}
-                </div>
+    <div style={{ background: "#082947", minHeight: "100vh" }}>
+      <div className="md:hidden bg-[#082947] px-4 pb-8">
+        <div className="mx-auto w-full max-w-[520px] pt-6">
+          <section>
+            <div className="mb-5 flex flex-col gap-4">
+              <div>
+                <h1 className="m-0 text-[34px] font-bold leading-tight text-white">
+                  {pageTitle}
+                </h1>
+                <p className="mt-2 text-[14px] text-white/75">
+                  {pageSubtitle}
+                </p>
               </div>
 
-              <section style={{ marginTop: "28px" }}>
-                <h2
-                  style={{
-                    margin: "0 0 18px",
-                    color: "#FFFFFF",
-                    fontSize: "30px",
-                    fontWeight: 600,
-                  }}
-                >
-                  {lang === "ua" ? "Усі новини" : "All news"}
-                </h2>
+              <div
+                style={glassCard}
+                className="flex h-11 items-center gap-3 rounded-full px-4"
+              >
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={
+                    lang === "ua" ? "Пошук інсайтів..." : "Search insights..."
+                  }
+                  className="h-full w-full bg-transparent text-sm text-white outline-none placeholder:text-white/60"
+                />
+                <span className="text-white/70">⌕</span>
+              </div>
+            </div>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gap: "16px",
-                  }}
-                >
+            {loading ? (
+              <div
+                style={glassCard}
+                className="rounded-[24px] px-5 py-10 text-center text-white"
+              >
+                {lang === "ua" ? "Завантаження..." : "Loading..."}
+              </div>
+            ) : errorText ? (
+              <div
+                style={glassCard}
+                className="rounded-[24px] px-5 py-10 text-center text-white"
+              >
+                {errorText}
+              </div>
+            ) : filteredInsights.length === 0 ? (
+              <div
+                style={glassCard}
+                className="rounded-[24px] px-5 py-10 text-center text-white"
+              >
+                {lang === "ua" ? "Інсайти не знайдено." : "No insights found."}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-12 gap-3 items-start">
+                  <div className="col-span-5">
+                    {firstLarge ? (
+                      <MobileLeadCard item={firstLarge} lang={lang} compact />
+                    ) : null}
+                  </div>
+
+                  <div className="col-span-4">
+                    {secondMedium ? (
+                      <MobileLeadCard item={secondMedium} lang={lang} compact />
+                    ) : null}
+                  </div>
+
+                  <div className="col-span-3 flex flex-col gap-3">
+                    {sideCards.map((item) => (
+                      <MobileMiniCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+
+                {restNews.length > 0 ? (
+                  <h2 className="mt-6 mb-3 text-[20px] font-semibold text-white">
+                    {lang === "ua" ? "Усі новини" : "All news"}
+                  </h2>
+                ) : null}
+
+                <div className="mt-2 space-y-4">
                   {restNews.length > 0 ? (
                     restNews.map((item) => (
-                      <InsightListItem
-                        key={item.id}
-                        item={item}
-                        lang={lang}
-                      />
+                      <MobileLeadCard key={item.id} item={item} lang={lang} />
                     ))
                   ) : (
                     <div
-                      style={{
-                        ...glassCard,
-                        borderRadius: "22px",
-                        padding: "24px",
-                        color: "#FFFFFF",
-                        textAlign: "center",
-                      }}
+                      style={glassCard}
+                      className="rounded-[24px] px-5 py-6 text-center text-white"
                     >
-                      {lang === "ua"
-                        ? "Додаткових новин поки немає."
-                        : "No more news yet."}
+                      {noMoreText}
                     </div>
                   )}
                 </div>
-              </section>
-            </>
-          )}
-        </section>
+              </>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <div
+        className="hidden md:block"
+        style={{
+          background: "#082947",
+          minHeight: "100vh",
+          padding: "0 16px 32px",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "1280px",
+            margin: "0 auto",
+            paddingTop: "24px",
+          }}
+        >
+          <section style={{ paddingTop: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "24px",
+                flexWrap: "wrap",
+                marginBottom: "18px",
+              }}
+            >
+              <div>
+                <h1
+                  style={{
+                    margin: 0,
+                    color: "#FFFFFF",
+                    fontSize: "42px",
+                    fontWeight: 700,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {pageTitle}
+                </h1>
+
+                <p
+                  style={{
+                    margin: "10px 0 0",
+                    color: "rgba(255,255,255,0.76)",
+                    fontSize: "16px",
+                  }}
+                >
+                  {pageSubtitle}
+                </p>
+              </div>
+
+              <div
+                style={{
+                  ...glassCard,
+                  borderRadius: "999px",
+                  width: "100%",
+                  maxWidth: "420px",
+                  height: "48px",
+                  padding: "0 18px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={
+                    lang === "ua" ? "Пошук інсайтів..." : "Search insights..."
+                  }
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#FFFFFF",
+                    fontSize: "14px",
+                  }}
+                />
+
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.70)",
+                    fontSize: "16px",
+                  }}
+                >
+                  ⌕
+                </span>
+              </div>
+            </div>
+
+            {loading ? (
+              <div
+                style={{
+                  ...glassCard,
+                  borderRadius: "24px",
+                  padding: "40px 24px",
+                  textAlign: "center",
+                  color: "#FFFFFF",
+                }}
+              >
+                {lang === "ua" ? "Завантаження..." : "Loading..."}
+              </div>
+            ) : errorText ? (
+              <div
+                style={{
+                  ...glassCard,
+                  borderRadius: "24px",
+                  padding: "40px 24px",
+                  textAlign: "center",
+                  color: "#FFFFFF",
+                }}
+              >
+                {errorText}
+              </div>
+            ) : filteredInsights.length === 0 ? (
+              <div
+                style={{
+                  ...glassCard,
+                  borderRadius: "24px",
+                  padding: "40px 24px",
+                  textAlign: "center",
+                  color: "#FFFFFF",
+                }}
+              >
+                {lang === "ua" ? "Інсайти не знайдено." : "No insights found."}
+              </div>
+            ) : (
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "2fr 1.2fr 1fr",
+                    gap: "18px",
+                    alignItems: "stretch",
+                  }}
+                >
+                  <div>
+                    {firstLarge ? <TopInsightLarge item={firstLarge} /> : null}
+                  </div>
+
+                  <div>
+                    {secondMedium ? <TopInsightMedium item={secondMedium} /> : null}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateRows: "1fr 1fr",
+                      gap: "18px",
+                    }}
+                  >
+                    {sideCards.map((item) => (
+                      <TopInsightSmall key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+
+                <section style={{ marginTop: "28px" }}>
+                  <h2
+                    style={{
+                      margin: "0 0 18px",
+                      color: "#FFFFFF",
+                      fontSize: "30px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {lang === "ua" ? "Усі новини" : "All news"}
+                  </h2>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: "16px",
+                    }}
+                  >
+                    {restNews.length > 0 ? (
+                      restNews.map((item) => (
+                        <InsightListItem
+                          key={item.id}
+                          item={item}
+                          lang={lang}
+                        />
+                      ))
+                    ) : (
+                      <div
+                        style={{
+                          ...glassCard,
+                          borderRadius: "22px",
+                          padding: "24px",
+                          color: "#FFFFFF",
+                          textAlign: "center",
+                        }}
+                      >
+                        {noMoreText}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );

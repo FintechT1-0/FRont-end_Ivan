@@ -2,115 +2,109 @@ import { Link } from "react-router-dom";
 import Logo from "../assets/Logo.png";
 import { useLang } from "../context/LanguageContext";
 
-const glassFooter = {
-  background:
-    "linear-gradient(180deg, rgba(19, 54, 90, 0.78) 0%, rgba(10, 37, 67, 0.88) 100%)",
-  border: "1px solid rgba(255,255,255,0.10)",
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.28)",
-  backdropFilter: "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
-};
-
-function FooterLink({ to, children }) {
-  return (
-    <Link
-      to={to}
-      style={{
-        color: "rgba(255,255,255,0.86)",
-        textDecoration: "none",
-        fontSize: "14px",
-      }}
-    >
-      {children}
-    </Link>
-  );
-}
-
 export default function Footer() {
   const { lang } = useLang();
 
-  const t = {
-    title: "FinTech UniVerse",
-    description:
-      lang === "ua"
-        ? "Платформа для курсів, інсайтів та AI-асистента"
-        : "Platform for courses, insights and AI assistant",
-    navigation: lang === "ua" ? "Навігація" : "Navigation",
-    account: lang === "ua" ? "Акаунт" : "Account",
-    admin: lang === "ua" ? "Адмін" : "Admin",
-    home: lang === "ua" ? "Головна" : "Home",
-    courses: lang === "ua" ? "Курси" : "Courses",
-    insights: lang === "ua" ? "Інсайди" : "Insights",
-    login: lang === "ua" ? "Увійти" : "Login",
-    register: lang === "ua" ? "Реєстрація" : "Register",
-    rights:
-      lang === "ua"
-        ? "Усі права захищено"
-        : "All rights reserved",
-  };
+  const t =
+    lang === "ua"
+      ? {
+          brand: "FinTech UniVerse",
+          desc: "Платформа для курсів, інсайтів та AI асистента",
+          navigation: "Навігація",
+          account: "Акаунт",
+          home: "Головна",
+          courses: "Курси",
+          insights: "Інсайти",
+          login: "Увійти",
+          register: "Реєстрація",
+          admin: "Адмін",
+          rights: "© FinTech UniVerse. Усі права захищено",
+        }
+      : {
+          brand: "FinTech UniVerse",
+          desc: "Platform for courses, insights and AI assistant",
+          navigation: "Navigation",
+          account: "Account",
+          home: "Home",
+          courses: "Courses",
+          insights: "Insights",
+          login: "Login",
+          register: "Register",
+          admin: "Admin",
+          rights: "© FinTech UniVerse. All rights reserved",
+        };
 
   return (
-    <footer
-      style={{
-        background: "#082947",
-        padding: "32px 16px",
-      }}
-    >
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+    <footer className="bg-[#082947] px-3 pb-4 pt-3 md:px-6 md:pb-8 md:pt-6">
+      <div className="mx-auto max-w-[1280px]">
         <div
+          className="rounded-[28px] border border-white/10 px-5 py-5 md:rounded-[30px] md:px-10 md:py-9"
           style={{
-            ...glassFooter,
-            borderRadius: "24px",
-            padding: "24px",
+            background:
+              "linear-gradient(180deg, rgba(19,54,90,0.82) 0%, rgba(10,37,67,0.9) 100%)",
+            boxShadow:
+              "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 40px rgba(0,0,0,0.22)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
           }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr",
-              gap: "24px",
-              color: "#fff",
-            }}
-          >
+          <div className="grid grid-cols-[1.35fr_0.9fr_0.9fr] gap-5 md:grid-cols-[1.6fr_0.8fr_0.8fr] md:gap-10">
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <img src={Logo} alt="logo" style={{ width: "40px" }} />
-                <span style={{ fontWeight: 600 }}>{t.title}</span>
+              <div className="flex items-center gap-2 md:gap-3">
+                <img
+                  src={Logo}
+                  alt="FinTech UniVerse"
+                  className="h-5 w-auto object-contain md:h-8"
+                />
+                <div className="text-[14px] font-semibold text-white md:text-[20px]">
+                  {t.brand}
+                </div>
               </div>
 
-              <p style={{ marginTop: "10px", opacity: 0.8 }}>
-                {t.description}
+              <p className="mt-4 max-w-[420px] text-[10px] leading-[1.45] text-white/85 md:mt-6 md:text-[18px]">
+                {t.desc}
               </p>
+
+              <div className="mt-8 text-[9px] text-white/60 md:mt-14 md:text-sm">
+                {t.rights}
+              </div>
             </div>
 
             <div>
-              <p style={{ fontWeight: 600 }}>{t.navigation}</p>
-              <FooterLink to="/">{t.home}</FooterLink>
-              <br />
-              <FooterLink to="/courses">{t.courses}</FooterLink>
-              <br />
-              <FooterLink to="/insights">{t.insights}</FooterLink>
+              <div className="text-[12px] font-semibold text-white md:text-[18px]">
+                {t.navigation}
+              </div>
+
+              <div className="mt-3 flex flex-col gap-2 text-[10px] text-white/90 md:mt-4 md:gap-3 md:text-[16px]">
+                <Link to="/" className="transition hover:text-white">
+                  {t.home}
+                </Link>
+                <Link to="/courses" className="transition hover:text-white">
+                  {t.courses}
+                </Link>
+                <Link to="/insights" className="transition hover:text-white">
+                  {t.insights}
+                </Link>
+              </div>
             </div>
 
             <div>
-              <p style={{ fontWeight: 600 }}>{t.account}</p>
-              <FooterLink to="/login">{t.login}</FooterLink>
-              <br />
-              <FooterLink to="/register">{t.register}</FooterLink>
-              <br />
-              <FooterLink to="/admin/auth">{t.admin}</FooterLink>
-            </div>
-          </div>
+              <div className="text-[12px] font-semibold text-white md:text-[18px]">
+                {t.account}
+              </div>
 
-          <div
-            style={{
-              marginTop: "20px",
-              fontSize: "12px",
-              opacity: 0.6,
-            }}
-          >
-            © FinTech UniVerse. {t.rights}
+              <div className="mt-3 flex flex-col gap-2 text-[10px] text-white/90 md:mt-4 md:gap-3 md:text-[16px]">
+                <Link to="/login" className="transition hover:text-white">
+                  {t.login}
+                </Link>
+                <Link to="/register" className="transition hover:text-white">
+                  {t.register}
+                </Link>
+                <Link to="/admin/auth" className="transition hover:text-white">
+                  {t.admin}
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
