@@ -362,33 +362,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section
-            style={{
-              marginTop: "-60px",
-              position: "relative",
-              zIndex: 3,
-            }}
-          >
-            <div
-              style={{
-                ...glassCard,
-                borderRadius: "20px",
-                padding: "22px 26px",
-                textAlign: "center",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color: "#E8EFF7",
-                  fontSize: "18px",
-                  lineHeight: 1.45,
-                }}
-              >
-                {aboutText}
-              </p>
-            </div>
-          </section>
+        
 
           <section
             style={{
