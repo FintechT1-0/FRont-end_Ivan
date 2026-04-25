@@ -1,463 +1,217 @@
 import { NavLink, Outlet } from "react-router-dom";
-
 import Logo from "../../assets/Logo.png";
-
 import { useLang } from "../../context/LanguageContext";
-
 import { useAuth } from "../../context/AuthContext";
 
-const PAGE_BG = "#70839F";
-
+const PAGE_BG = "#56677F";
 const NAVY = "#082947";
-
 const RED = "#B3131A";
 
 function TopLink({ to, children }) {
-
   return (
-
     <NavLink
-
       to={to}
-
-      style={({ isActive }) => ({
-
-        color: isActive ? "#FFFFFF" : "rgba(255,255,255,0.92)",
-
+      style={{
+        color: "#FFFFFF",
         textDecoration: "none",
-
         fontSize: "10px",
-
-        fontWeight: 400,
-
-        lineHeight: 1,
-
-      })}
-
+        fontWeight: 500,
+      }}
     >
-
       {children}
-
     </NavLink>
-
   );
-
 }
 
 function SideLink({ to, children, end = false }) {
-
   return (
-
     <NavLink
-
       to={to}
-
       end={end}
-
       style={({ isActive }) => ({
-
         display: "flex",
-
         alignItems: "center",
-
-        width: "100%",
-
-        minHeight: "34px",
-
-        padding: "0 16px",
-
+        height: "38px",
+        padding: "0 18px",
         borderRadius: "999px",
-
         textDecoration: "none",
-
         color: "#FFFFFF",
-
-        fontSize: "11px",
-
-        fontWeight: 500,
-
-        lineHeight: 1,
-
-        whiteSpace: "nowrap",
-
+        fontSize: "12px",
+        fontWeight: 600,
         background: isActive
-
-          ? "linear-gradient(180deg, rgba(18,54,92,1) 0%, rgba(10,39,70,1) 100%)"
-
+          ? "linear-gradient(180deg, #123A61 0%, #082947 100%)"
           : "transparent",
-
         border: isActive
-
-          ? "1px solid rgba(255,255,255,0.10)"
-
+          ? "1px solid rgba(255,255,255,0.18)"
           : "1px solid transparent",
-
-        boxShadow: isActive ? "0 10px 20px rgba(0,0,0,0.18)" : "none",
-
       })}
-
     >
-
       {children}
-
     </NavLink>
-
   );
-
 }
 
 export default function AdminPage() {
-
   const { lang, toggleLang } = useLang();
-
   const { logout } = useAuth();
 
+  const t = {
+    main: lang === "ua" ? "Головна" : "Main",
+    courses: lang === "ua" ? "Курси" : "Courses",
+    insights: lang === "ua" ? "Інсайди" : "Insights",
+    partners: lang === "ua" ? "Партнери" : "Partners",
+    dashboard: lang === "ua" ? "Панель" : "Dashboard",
+    activity: lang === "ua" ? "Активність" : "Activity/Logs",
+    users: lang === "ua" ? "Користувачі" : "Users",
+    settings: lang === "ua" ? "Налаштування" : "Settings",
+    logout: lang === "ua" ? "Вийти" : "Sign out",
+  };
+
   return (
-
     <div
-
       style={{
-
         minHeight: "100vh",
-
         background: PAGE_BG,
-
-        padding: "24px 0",
-
+        padding: "24px 16px",
       }}
-
     >
-
       <div
-
         style={{
-
-          width: "100%",
-
-          maxWidth: "1240px",
-
+          maxWidth: "1180px",
           margin: "0 auto",
-
         }}
-
       >
+        <header
+          style={{
+            height: "56px",
+            borderRadius: "999px",
+            display: "grid",
+            gridTemplateColumns: "150px 1fr 150px",
+            alignItems: "center",
+            padding: "0 18px",
+            background:
+              "linear-gradient(180deg, rgba(86,105,130,0.96) 0%, rgba(77,96,122,0.96) 100%)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+            marginLeft: "170px",
+          }}
+        >
+          <div
+            style={{
+              width: "120px",
+              height: "44px",
+              borderRadius: "999px",
+              background: "linear-gradient(180deg, #123A61 0%, #082947 100%)",
+              border: "1px solid rgba(255,255,255,0.16)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 10px 18px rgba(0,0,0,0.18)",
+              transform: "translateX(-145px)",
+            }}
+          >
+            <img
+              src={Logo}
+              alt="FinTech UniVerse"
+              style={{
+                width: "32px",
+                height: "32px",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+
+          <nav
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "34px",
+            }}
+          >
+            <TopLink to="/">{t.main}</TopLink>
+            <TopLink to="/courses">{t.courses}</TopLink>
+            <TopLink to="/insights">{t.insights}</TopLink>
+            <TopLink to="/partners">{t.partners}</TopLink>
+          </nav>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <button type="button" onClick={toggleLang} style={langButton}>
+              {lang === "ua" ? "EN" : "UA"}
+            </button>
+
+            <button type="button" onClick={logout} style={logoutButton}>
+              {t.logout}
+            </button>
+          </div>
+        </header>
 
         <div
-
           style={{
-
-            width: "100%",
-
-            minHeight: "760px",
-
-            background: PAGE_BG,
-
+            display: "grid",
+            gridTemplateColumns: "170px 1fr",
+            marginTop: "18px",
+            minHeight: "700px",
           }}
-
         >
-
-          <div
-
+          <aside
             style={{
-
-              height: "58px",
-
-              borderRadius: "999px",
-
-              display: "grid",
-
-              gridTemplateColumns: "92px 1fr 130px",
-
-              alignItems: "center",
-
-              padding: "0 14px",
-
-              background:
-
-                "linear-gradient(180deg, rgba(86,105,130,0.95) 0%, rgba(97,117,143,0.95) 100%)",
-
-              border: "1px solid rgba(255,255,255,0.10)",
-
-              boxShadow:
-
-                "inset 0 1px 0 rgba(255,255,255,0.06), 0 14px 28px rgba(0,0,0,0.14)",
-
+              background: NAVY,
+              padding: "28px 14px",
+              minHeight: "700px",
             }}
-
           >
-
-            <div
-
-              style={{
-
-                width: "72px",
-
-                height: "34px",
-
-                borderRadius: "999px",
-
-                display: "flex",
-
-                alignItems: "center",
-
-                paddingLeft: "14px",
-
-                background:
-
-                  "linear-gradient(180deg, rgba(24,67,109,0.98) 0%, rgba(13,44,77,0.98) 100%)",
-
-                border: "1px solid rgba(255,255,255,0.08)",
-
-                boxShadow: "0 8px 16px rgba(0,0,0,0.14)",
-
-              }}
-
-            >
-
-              <img
-
-                src={Logo}
-
-                alt="FinTech UniVerse"
-
-                style={{
-
-                  width: "22px",
-
-                  height: "22px",
-
-                  objectFit: "contain",
-
-                }}
-
-              />
-
+            <div style={{ display: "grid", gap: "14px" }}>
+              <SideLink to="/admin" end>
+                {t.dashboard}
+              </SideLink>
+              <SideLink to="/admin/activity">{t.activity}</SideLink>
+              <SideLink to="/admin/users">{t.users}</SideLink>
+              <SideLink to="/admin/courses">{t.courses}</SideLink>
+              <SideLink to="/admin/settings">{t.settings}</SideLink>
             </div>
+          </aside>
 
-            <nav
-
-              style={{
-
-                display: "flex",
-
-                justifyContent: "center",
-
-                alignItems: "center",
-
-                gap: "30px",
-
-              }}
-
-            >
-
-              <TopLink to="/">{lang === "ua" ? "Головна" : "Main"}</TopLink>
-
-              <TopLink to="/courses">{lang === "ua" ? "Курси" : "Courses"}</TopLink>
-
-              <TopLink to="/insights">{lang === "ua" ? "Інсайди" : "Insights"}</TopLink>
-
-              <TopLink to="/partners">{lang === "ua" ? "Партнери" : "Partners"}</TopLink>
-
-            </nav>
-
-            <div
-
-              style={{
-
-                display: "flex",
-
-                justifyContent: "flex-end",
-
-                alignItems: "center",
-
-                gap: "8px",
-
-              }}
-
-            >
-
-              <button
-
-                type="button"
-
-                onClick={toggleLang}
-
-                style={{
-
-                  minWidth: "42px",
-
-                  height: "28px",
-
-                  borderRadius: "999px",
-
-                  border: "1px solid rgba(255,255,255,0.18)",
-
-                  background: "rgba(255,255,255,0.05)",
-
-                  color: "#FFFFFF",
-
-                  fontSize: "10px",
-
-                  cursor: "pointer",
-
-                }}
-
-              >
-
-                {lang === "ua" ? "EN" : "UA"}
-
-              </button>
-
-              <button
-
-                type="button"
-
-                onClick={logout}
-
-                style={{
-
-                  minWidth: "68px",
-
-                  height: "28px",
-
-                  border: "none",
-
-                  borderRadius: "999px",
-
-                  background: RED,
-
-                  color: "#FFFFFF",
-
-                  fontSize: "10px",
-
-                  fontWeight: 600,
-
-                  cursor: "pointer",
-
-                  boxShadow: "0 8px 16px rgba(179,19,26,0.22)",
-
-                }}
-
-              >
-
-                {lang === "ua" ? "Вийти" : "Sign out"}
-
-              </button>
-
-            </div>
-
-          </div>
-
-          <div
-
+          <main
             style={{
-
-              display: "grid",
-
-              gridTemplateColumns: "128px 1fr",
-
-              marginTop: "14px",
-
-              minHeight: "688px",
-
+              padding: "28px 24px 0",
             }}
-
           >
-
-            <aside
-
-              style={{
-
-                background: NAVY,
-
-                padding: "18px 12px",
-
-              }}
-
-            >
-
-              <div
-
-                style={{
-
-                  display: "grid",
-
-                  gap: "12px",
-
-                }}
-
-              >
-
-                <SideLink to="/admin" end>
-
-                  Dashboard
-
-                </SideLink>
-
-                <SideLink to="/admin/activity">
-
-                  Activity/Logs
-
-                </SideLink>
-
-                <SideLink to="/admin/users">
-
-                  Users
-
-                </SideLink>
-
-                <SideLink to="/admin/courses">
-
-                  Courses
-
-                </SideLink>
-
-                <SideLink to="/admin/settings">
-
-                  Settings
-
-                </SideLink>
-
-              </div>
-
-            </aside>
-
-            <main
-
-              style={{
-
-                padding: "18px 18px 0 16px",
-
-              }}
-
-            >
-
-              <div
-
-                style={{
-
-                  width: "100%",
-
-                  maxWidth: "980px",
-
-                }}
-
-              >
-
-                <Outlet />
-
-              </div>
-
-            </main>
-
-          </div>
-
+            <Outlet />
+          </main>
         </div>
-
       </div>
-
     </div>
-
   );
-
 }
+
+const langButton = {
+  minWidth: "42px",
+  height: "24px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(255,255,255,0.05)",
+  color: "#FFFFFF",
+  fontSize: "10px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const logoutButton = {
+  minWidth: "70px",
+  height: "24px",
+  border: "none",
+  borderRadius: "999px",
+  background: RED,
+  color: "#FFFFFF",
+  fontSize: "10px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
