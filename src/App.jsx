@@ -18,6 +18,7 @@ import AdminAuthPage from "./pages/AdminAuthPage";
 import UserLayout from "./components/UserLayout";
 import UserCabinetPage from "./pages/UserCabinetPage";
 import UserCoursesPage from "./pages/UserCoursesPage";
+import UserSettingsPage from "./pages/UserSettingsPage.jsx";
 
 import AdminPage from "./pages/admin/AdminPage";
 import AdminCabinetPage from "./pages/admin/AdminCabinetPage";
@@ -49,8 +50,7 @@ export default function App() {
           >
             <Route index element={<UserCabinetPage />} />
             <Route path="courses" element={<UserCoursesPage />} />
-            <Route path="settings" element={<UserCabinetPage />} />
-          </Route>
+            <Route path="settings" element={<UserSettingsPage />} />          </Route>
         </Route>
 
         <Route path="/login" element={<LoginPage />} />
