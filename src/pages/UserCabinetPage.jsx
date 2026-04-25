@@ -25,17 +25,17 @@ export default function UserCabinetPage() {
     return {
       title: lang === "ua" ? "КАБІНЕТ" : "CABINET",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
-      fail: lang === "ua" ? "Не вдалося завантажити профіль" : "Failed to load profile",
+      fail:
+        lang === "ua"
+          ? "Не вдалося завантажити профіль"
+          : "Failed to load profile",
 
       profile: lang === "ua" ? "Профіль" : "Profile",
-      profileHint:
-        lang === "ua"
-          ? "Дані твого акаунта"
-          : "Your account information",
+      hint: lang === "ua" ? "Дані твого акаунта" : "Your account data",
 
-      name: lang === "ua" ? "Імʼя" : "First name",
-      surname: lang === "ua" ? "Прізвище" : "Last name",
-      email: lang === "ua" ? "Пошта" : "Email address",
+      name: lang === "ua" ? "Імʼя" : "Name",
+      surname: lang === "ua" ? "Прізвище" : "Surname",
+      email: lang === "ua" ? "Пошта" : "Email",
       role: lang === "ua" ? "Роль" : "Role",
       status: lang === "ua" ? "Статус" : "Status",
       active: lang === "ua" ? "Активний" : "Active",
@@ -44,36 +44,29 @@ export default function UserCabinetPage() {
       ai: lang === "ua" ? "AI-асистент" : "AI assistant",
       aiText:
         lang === "ua"
-          ? "Асистент доступний через плаваючу кнопку. Він підбирає релевантні інсайти за твоїм запитом."
-          : "The assistant is available through the floating button. It recommends relevant insights based on your request.",
+          ? "Асистент доступний через кнопку внизу. Він підбирає релевантні інсайти за твоїм запитом."
+          : "Assistant is available via the floating button. It recommends relevant insights based on your request.",
 
-      courses: lang === "ua" ? "Курси" : "Courses",
-      insights: lang === "ua" ? "Інсайди" : "Insights",
-      openCourses: lang === "ua" ? "Перейти до курсів" : "Go to courses",
-      openInsights: lang === "ua" ? "Перейти до інсайтів" : "Go to insights",
+      goCourses: lang === "ua" ? "Перейти до курсів" : "Go to courses",
+      goInsights: lang === "ua" ? "Перейти до інсайтів" : "Go to insights",
 
       extra: lang === "ua" ? "Додаткові можливості" : "Extra features",
-      savedCourses: lang === "ua" ? "Збережені курси" : "Saved courses",
-      viewedInsights: lang === "ua" ? "Переглянуті інсайти" : "Viewed insights",
-      recommendations: lang === "ua" ? "Персональні рекомендації" : "Personal recommendations",
+      saved: lang === "ua" ? "Збережені курси" : "Saved courses",
+      viewed: lang === "ua" ? "Переглянуті інсайти" : "Viewed insights",
+      recs: lang === "ua" ? "Рекомендації" : "Recommendations",
 
-      inProgress: lang === "ua" ? "Сектор у розробці" : "Section in progress",
-      inProgressText:
+      dev: lang === "ua" ? "Сектор у розробці" : "In development",
+      devText:
         lang === "ua"
-          ? "Бекенд поки не передає ці дані."
-          : "Backend does not return this data yet.",
-
-      note:
-        lang === "ua"
-          ? "Фото профілю, мобільний номер, адреса та біо поки не реалізовані на бекенді."
-          : "Profile photo, mobile number, address and bio are not implemented on the backend yet.",
+          ? "Бекенд ще не віддає ці дані."
+          : "Backend does not provide this data yet.",
     };
   }, [lang]);
 
   useEffect(() => {
     let active = true;
 
-    async function loadProfile() {
+    async function load() {
       try {
         setLoading(true);
         setErrorText("");
@@ -82,16 +75,15 @@ export default function UserCabinetPage() {
         if (!active) return;
 
         setUser(data);
-      } catch (error) {
+      } catch (e) {
         if (!active) return;
-        setUser(null);
-        setErrorText(getBackendError(error, t.fail));
+        setErrorText(getBackendError(e, t.fail));
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    loadProfile();
+    load();
 
     return () => {
       active = false;
@@ -100,74 +92,66 @@ export default function UserCabinetPage() {
 
   return (
     <div style={page}>
-      <div style={container}>
+      <div style={wrap}>
         <h1 style={title}>{t.title}</h1>
 
         {loading ? (
-          <div style={whitePanel}>{t.loading}</div>
+          <div style={card}>
+            <div style={message}>{t.loading}</div>
+          </div>
         ) : errorText ? (
-          <div style={whitePanel}>{errorText}</div>
+          <div style={card}>
+            <div style={message}>{errorText}</div>
+          </div>
         ) : user ? (
-          <div style={whitePanel}>
-            <section style={topSection}>
+          <div style={card}>
+            <div style={section}>
               <div>
-                <h2 style={sectionTitle}>{t.profile}</h2>
-                <p style={sectionHint}>{t.profileHint}</p>
+                <h2 style={h2}>{t.profile}</h2>
+                <p style={hint}>{t.hint}</p>
               </div>
 
-              <div style={avatarWrap}>
-                <div style={avatarCircle}>◉</div>
-                <div style={mutedNote}>{t.note}</div>
-              </div>
-            </section>
-
-            <section style={formSection}>
-              <div>
-                <h3 style={smallTitle}>{t.profile}</h3>
-                <p style={sectionHint}>{t.profileHint}</p>
-              </div>
-
-              <div style={infoGrid}>
-                <Info label={t.name} value={user.name || "-"} />
-                <Info label={t.surname} value={user.surname || "-"} />
-                <Info label={t.email} value={user.email || "-"} />
-                <Info label={t.role} value={user.role || "-"} />
-                <Info
+              <div style={grid}>
+                <Field label={t.name} value={user.name} />
+                <Field label={t.surname} value={user.surname} />
+                <Field label={t.email} value={user.email} />
+                <Field label={t.role} value={user.role} />
+                <Field
                   label={t.status}
                   value={user.is_suspended ? t.suspended : t.active}
                 />
               </div>
-            </section>
+            </div>
 
-            <section style={formSection}>
+            <div style={section}>
               <div>
-                <h3 style={smallTitle}>{t.ai}</h3>
-                <p style={sectionHint}>{t.aiText}</p>
+                <h2 style={h2}>{t.ai}</h2>
+                <p style={hint}>{t.aiText}</p>
               </div>
 
-              <div style={actionsGrid}>
-                <Link to="/courses" style={primaryBtn}>
-                  {t.openCourses}
+              <div style={actions}>
+                <Link to="/courses" style={btnPrimary}>
+                  {t.goCourses}
                 </Link>
 
-                <Link to="/insights" style={secondaryBtn}>
-                  {t.openInsights}
+                <Link to="/insights" style={btnGhost}>
+                  {t.goInsights}
                 </Link>
               </div>
-            </section>
+            </div>
 
-            <section style={formSection}>
+            <div style={sectionLast}>
               <div>
-                <h3 style={smallTitle}>{t.extra}</h3>
-                <p style={sectionHint}>{t.inProgressText}</p>
+                <h2 style={h2}>{t.extra}</h2>
+                <p style={hint}>{t.devText}</p>
               </div>
 
-              <div style={cardsGrid}>
-                <DisabledCard title={t.savedCourses} badge={t.inProgress} />
-                <DisabledCard title={t.viewedInsights} badge={t.inProgress} />
-                <DisabledCard title={t.recommendations} badge={t.inProgress} />
+              <div style={extraGrid}>
+                <DevCard title={t.saved} badge={t.dev} />
+                <DevCard title={t.viewed} badge={t.dev} />
+                <DevCard title={t.recs} badge={t.dev} />
               </div>
-            </section>
+            </div>
           </div>
         ) : null}
       </div>
@@ -175,202 +159,164 @@ export default function UserCabinetPage() {
   );
 }
 
-function Info({ label, value }) {
+function Field({ label, value }) {
   return (
     <div>
       <div style={labelStyle}>{label}</div>
-      <div style={inputLike}>{value}</div>
+      <div style={input}>{value || "-"}</div>
     </div>
   );
 }
 
-function DisabledCard({ title, badge }) {
+function DevCard({ title, badge }) {
   return (
-    <div style={disabledCard}>
-      <div style={disabledTitle}>{title}</div>
-      <div style={disabledBadge}>{badge}</div>
+    <div style={devCard}>
+      <div style={devTitle}>{title}</div>
+      <div style={devBadge}>{badge}</div>
     </div>
   );
 }
 
 const page = {
-  minHeight: "90vh",
   background: "#56677F",
-  color: "#FFFFFF",
-  padding: "34px 18px 54px",
+  minHeight: "100vh",
+  padding: "32px 16px",
 };
 
-const container = {
-  maxWidth: "1120px",
+const wrap = {
+  maxWidth: "1100px",
   margin: "0 auto",
 };
 
 const title = {
-  margin: "0 0 22px",
   color: "#FFFFFF",
-  fontSize: "36px",
-  lineHeight: 1,
+  fontSize: "34px",
   fontWeight: 800,
-  letterSpacing: "0.02em",
+  margin: "0 0 20px",
 };
 
-const whitePanel = {
+const card = {
   background: "#FFFFFF",
-  color: "#101828",
   borderRadius: "18px",
   overflow: "hidden",
-  boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+  boxShadow: "0 18px 40px rgba(0,0,0,0.16)",
 };
 
-const topSection = {
+const message = {
+  padding: "24px 28px",
+  color: "#101828",
+  fontSize: "14px",
+  fontWeight: 700,
+};
+
+const section = {
   display: "grid",
-  gridTemplateColumns: "220px 1fr",
-  gap: "32px",
-  padding: "28px 32px",
-  borderBottom: "1px solid #D9DEE7",
+  gridTemplateColumns: "240px 1fr",
+  gap: "30px",
+  padding: "26px 28px",
+  borderBottom: "1px solid #E3E7EE",
 };
 
-const formSection = {
-  display: "grid",
-  gridTemplateColumns: "220px 1fr",
-  gap: "32px",
-  padding: "26px 32px",
-  borderBottom: "1px solid #D9DEE7",
+const sectionLast = {
+  ...section,
+  borderBottom: "none",
 };
 
-const sectionTitle = {
+const h2 = {
   margin: 0,
   color: "#101828",
   fontSize: "18px",
   fontWeight: 800,
 };
 
-const smallTitle = {
-  margin: 0,
-  color: "#101828",
-  fontSize: "17px",
-  fontWeight: 800,
-};
-
-const sectionHint = {
+const hint = {
+  fontSize: "12px",
+  color: "#344054",
   margin: "6px 0 0",
-  color: "#101828",
-  fontSize: "12px",
   lineHeight: 1.5,
 };
 
-const avatarWrap = {
-  display: "flex",
-  alignItems: "center",
-  gap: "22px",
-};
-
-const avatarCircle = {
-  width: "120px",
-  height: "120px",
-  borderRadius: "50%",
-  background: "#082947",
-  color: "#FFFFFF",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "28px",
-};
-
-const mutedNote = {
-  maxWidth: "360px",
-  color: "#667085",
-  fontSize: "12px",
-  lineHeight: 1.5,
-};
-
-const infoGrid = {
+const grid = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: "18px 42px",
+  gap: "18px 30px",
 };
 
 const labelStyle = {
   color: "#101828",
-  fontSize: "14px",
-  fontWeight: 700,
-  marginBottom: "8px",
-};
-
-const inputLike = {
-  minHeight: "36px",
-  borderRadius: "7px",
-  border: "1px solid #AEB4BE",
-  padding: "8px 12px",
-  color: "#101828",
   fontSize: "13px",
-  background: "#FFFFFF",
+  fontWeight: 800,
+  marginBottom: "6px",
 };
 
-const actionsGrid = {
+const input = {
+  minHeight: "38px",
+  border: "1px solid #C7CEDA",
+  borderRadius: "8px",
   display: "flex",
-  gap: "14px",
+  alignItems: "center",
+  padding: "0 12px",
+  color: "#101828",
+  background: "#FFFFFF",
+  fontSize: "13px",
+  fontWeight: 700,
+  wordBreak: "break-word",
+};
+
+const actions = {
+  display: "flex",
+  gap: "12px",
+  alignItems: "center",
   flexWrap: "wrap",
 };
 
-const primaryBtn = {
-  minWidth: "150px",
-  height: "36px",
-  borderRadius: "7px",
+const btnPrimary = {
   background: "#2E5D8C",
   color: "#FFFFFF",
+  padding: "9px 18px",
+  borderRadius: "8px",
   textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "13px",
   fontWeight: 800,
+  fontSize: "13px",
 };
 
-const secondaryBtn = {
-  minWidth: "150px",
-  height: "36px",
-  borderRadius: "7px",
+const btnGhost = {
   border: "1px solid #2E5D8C",
-  background: "#FFFFFF",
   color: "#2E5D8C",
+  background: "#FFFFFF",
+  padding: "9px 18px",
+  borderRadius: "8px",
   textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "13px",
   fontWeight: 800,
+  fontSize: "13px",
 };
 
-const cardsGrid = {
+const extraGrid = {
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
   gap: "14px",
 };
 
-const disabledCard = {
-  minHeight: "96px",
-  borderRadius: "14px",
-  border: "1px dashed #AEB4BE",
-  background: "#F4F6F9",
+const devCard = {
+  border: "1px dashed #B8C1CE",
+  borderRadius: "12px",
   padding: "14px",
+  background: "#F5F7FB",
 };
 
-const disabledTitle = {
+const devTitle = {
   color: "#101828",
-  fontSize: "14px",
   fontWeight: 800,
-  marginBottom: "12px",
+  marginBottom: "8px",
+  fontSize: "13px",
 };
 
-const disabledBadge = {
-  display: "inline-flex",
-  alignItems: "center",
-  minHeight: "24px",
-  padding: "0 10px",
-  borderRadius: "999px",
-  background: "#E8EEF6",
+const devBadge = {
   color: "#2E5D8C",
   fontSize: "11px",
   fontWeight: 800,
+  padding: "5px 10px",
+  borderRadius: "999px",
+  background: "#E3E9F2",
+  display: "inline-block",
 };
