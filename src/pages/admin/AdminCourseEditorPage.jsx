@@ -1,318 +1,620 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createCourse, getCourse, updateCourse } from "../../api/adminCourses";
+import { createCourse, getCourseById, updateCourse } from "../../api/courses";
 import { useLang } from "../../context/LanguageContext";
 
-function tagsToString(tags) {
-  if (!Array.isArray(tags)) return "";
-  return tags.filter(Boolean).join(", ");
-}
-
-function stringToTags(str) {
-  const tags = (str || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return tags.length ? tags : [];
-}
-
-function normalizeCourse(data = {}) {
+function emptyChapter() {
   return {
-    title_ua: data.title_ua ?? "",
-    title_en: data.title_en ?? "",
-    description_ua: data.description_ua ?? "",
-    description_en: data.description_en ?? "",
-    category: data.category ?? "",
-    durationText: data.durationText ?? "",
-    price:
-      typeof data.price === "number" ? data.price : Number(data.price) || 0,
-    image: data.image ?? "",
-    link: data.link ?? data.url ?? "",
-    tags: Array.isArray(data.tags) ? data.tags : [],
-    isPublished: Boolean(data.isPublished),
-    isArchived: Boolean(data.isArchived),
+    title_ua: "",
+    title_en: "",
+    description_ua: "",
+    description_en: "",
+    embeddings: [""],
   };
 }
 
-function validateCourse(form, lang) {
-  const ua = lang === "ua";
-  const errors = [];
-
-  if (!form.title_ua?.trim())
-    errors.push(ua ? "Заповни Title (UA)." : "Fill Title (UA).");
-  if (!form.title_en?.trim())
-    errors.push(ua ? "Заповни Title (EN)." : "Fill Title (EN).");
-  if (!form.description_ua?.trim())
-    errors.push(ua ? "Заповни Description (UA)." : "Fill Description (UA).");
-  if (!form.description_en?.trim())
-    errors.push(ua ? "Заповни Description (EN)." : "Fill Description (EN).");
-  if (!form.category?.trim())
-    errors.push(ua ? "Заповни Category." : "Fill Category.");
-  if (!form.durationText?.trim())
-    errors.push(ua ? "Заповни Duration." : "Fill Duration.");
-
-  if (!Array.isArray(form.tags) || form.tags.length < 1)
-    errors.push(ua ? "Додай хоча б один tag." : "Add at least one tag.");
-
-  const price = Number(form.price);
-  if (Number.isNaN(price) || price < 0)
-    errors.push(ua ? "Price має бути >= 0." : "Price must be >= 0.");
-
-  if (!form.isPublished && !form.isArchived)
-    errors.push(
-      ua
-        ? "Обери статус: Опубліковано або В архіві."
-        : "Choose status: Published or Archived."
-    );
-
-  if (form.isPublished && form.isArchived)
-    errors.push(
-      ua
-        ? "Не можна вибрати два статуси одночасно."
-        : "You can't select both statuses."
-    );
-
-  return errors;
+function tagsToText(tags) {
+  return Array.isArray(tags) ? tags.join(", ") : "";
 }
 
-function toNullIfEmpty(v) {
-  if (v === undefined || v === null) return null;
-  const s = String(v).trim();
-  return s.length ? s : null;
+function textToTags(value) {
+  return String(value || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
-function sanitizePayload(form, tagsText) {
-  const tags = stringToTags(tagsText);
+function normalizeEmbeddings(value) {
+  if (Array.isArray(value)) {
+    return value.map((x) => String(x || "").trim()).filter(Boolean);
+  }
 
-  const payload = {
-    title_ua: toNullIfEmpty(form.title_ua),
-    title_en: toNullIfEmpty(form.title_en),
-    description_ua: toNullIfEmpty(form.description_ua),
-    description_en: toNullIfEmpty(form.description_en),
-    category: toNullIfEmpty(form.category),
-    durationText: toNullIfEmpty(form.durationText),
-    price: Number(form.price) || 0,
-    image: toNullIfEmpty(form.image),
-    link: toNullIfEmpty(form.link),
-    speaker: null,
-    tags,
-    isPublished: Boolean(form.isPublished),
-    isArchived: Boolean(form.isArchived),
-  };
+  return [];
+}
 
-  return payload;
+function getBackendError(error, fallback) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((x) => x.msg).join(", ");
+  return error?.response?.data?.message || error?.message || fallback;
 }
 
 export default function AdminCourseEditorPage() {
   const { lang } = useLang();
   const { id } = useParams();
-  const isEdit = Boolean(id);
   const navigate = useNavigate();
 
+  const isEdit = Boolean(id);
+
+  const [activeTab, setActiveTab] = useState("details");
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(normalizeCourse());
-  const [tagsText, setTagsText] = useState("");
+
+  const [form, setForm] = useState({
+    course_type: "external",
+    title_ua: "",
+    title_en: "",
+    description_ua: "",
+    description_en: "",
+    category: "",
+    tags: "",
+    durationText: "",
+    price: "",
+    link: "",
+    image: "",
+    speaker: "",
+    isPublished: false,
+    chapters: [emptyChapter()],
+  });
 
   const t = useMemo(() => {
-    const ua = lang === "ua";
     return {
-      title: isEdit ? (ua ? "Редагувати курс" : "Edit course") : ua ? "Створити курс" : "Create course",
-      save: ua ? "Зберегти" : "Save",
-      back: ua ? "Назад" : "Back",
-      placeholder: ua
-        ? "Поля відповідають API бекенду. Мінімум: назви, описи, категорія, duration, tags, price."
-        : "Fields match backend API. Minimum: titles, descriptions, category, duration, tags, price.",
-      required: ua ? "Обов’язково" : "Required",
-      tagsHint: ua ? "Введи теги через кому. Напр: fintech, ai, regtech" : "Enter tags separated by commas. Ex: fintech, ai, regtech",
-      publish: ua ? "Опубліковано" : "Published",
-      archived: ua ? "В архіві" : "Archived",
-      saveFailed: ua ? "Не вдалося зберегти курс." : "Save failed.",
-      loadFailed: ua ? "Не вдалося завантажити курс." : "Failed to load course.",
+      title: isEdit
+        ? lang === "ua"
+          ? "РЕДАГУВАТИ КУРС"
+          : "EDIT COURSE"
+        : lang === "ua"
+        ? "СТВОРИТИ КУРС"
+        : "CREATE COURSE",
+
+      details: lang === "ua" ? "Деталі курсу" : "Course details",
+      content: lang === "ua" ? "Контент і extra" : "Content and extra",
+
+      save: lang === "ua" ? "Зберегти" : "Save",
+      saving: lang === "ua" ? "Збереження..." : "Saving...",
+      back: lang === "ua" ? "Назад" : "Back",
+
+      courseType: lang === "ua" ? "Тип курсу" : "Course type",
+      external: lang === "ua" ? "Зовнішній курс" : "External course",
+      internal: lang === "ua" ? "Внутрішній курс" : "Internal course",
+
+      category: lang === "ua" ? "Категорія" : "Category",
+      titleUa: lang === "ua" ? "Назва UA" : "Title UA",
+      titleEn: lang === "ua" ? "Назва EN" : "Title EN",
+      descUa: lang === "ua" ? "Опис UA" : "Description UA",
+      descEn: lang === "ua" ? "Опис EN" : "Description EN",
+      tags: lang === "ua" ? "Теги через кому" : "Tags separated by comma",
+      duration: lang === "ua" ? "Тривалість" : "Duration",
+      price: lang === "ua" ? "Ціна" : "Price",
+      speaker: lang === "ua" ? "Спікер" : "Speaker",
+      image: lang === "ua" ? "URL зображення" : "Image URL",
+      link: lang === "ua" ? "Зовнішнє посилання" : "External link",
+      published: lang === "ua" ? "Опубліковано" : "Published",
+
+      chapter: lang === "ua" ? "Глава" : "Chapter",
+      chapterTitleUa: lang === "ua" ? "Назва глави UA" : "Chapter title UA",
+      chapterTitleEn: lang === "ua" ? "Назва глави EN" : "Chapter title EN",
+      chapterTextUa: lang === "ua" ? "Текст глави UA" : "Chapter text UA",
+      chapterTextEn: lang === "ua" ? "Текст глави EN" : "Chapter text EN",
+
+      extraLinks:
+        lang === "ua"
+          ? "Extra ресурси / YouTube / матеріали"
+          : "Extra resources / YouTube / materials",
+      extraPlaceholder:
+        lang === "ua"
+          ? "Встав URL ресурсу"
+          : "Paste resource URL",
+      addExtra:
+        lang === "ua"
+          ? "+ Додати extra посилання"
+          : "+ Add extra link",
+      removeExtra:
+        lang === "ua"
+          ? "Видалити посилання"
+          : "Remove link",
+
+      addChapter: lang === "ua" ? "+ Додати главу" : "+ Add chapter",
+      remove: lang === "ua" ? "Видалити" : "Remove",
+
+      externalInfo:
+        lang === "ua"
+          ? "Для зовнішнього курсу додай посилання на чужий ресурс у полі «Зовнішнє посилання». У вкладці «Контент і extra» можна додати extra посилання, YouTube або матеріали."
+          : "For an external course, add the third-party course link in External link. In Content and extra, you can add extra links, YouTube or materials.",
+      internalInfo:
+        lang === "ua"
+          ? "Для внутрішнього курсу додай глави, великий текст і extra посилання. Extra зберігається як embeddings у главі."
+          : "For an internal course, add chapters, large text and extra links. Extra is stored as embeddings inside the chapter.",
+
+      required:
+        lang === "ua"
+          ? "Заповни обов’язкові поля."
+          : "Fill required fields.",
+      needLink:
+        lang === "ua"
+          ? "Для зовнішнього курсу потрібне посилання."
+          : "External course needs a link.",
+      needChapter:
+        lang === "ua"
+          ? "Додай хоча б одну заповнену главу або extra блок."
+          : "Add at least one completed chapter or extra block.",
+      fail:
+        lang === "ua"
+          ? "Не вдалося зберегти курс."
+          : "Failed to save course.",
+      loading: lang === "ua" ? "Завантаження..." : "Loading...",
     };
   }, [lang, isEdit]);
 
   useEffect(() => {
-    let alive = true;
+    let active = true;
 
     async function load() {
-      if (!isEdit) {
-        setLoading(false);
-        return;
-      }
+      if (!isEdit) return;
 
       try {
-        const data = await getCourse(id);
-        if (!alive) return;
-        const normalized = normalizeCourse(data);
-        setForm(normalized);
-        setTagsText(tagsToString(normalized.tags));
-      } catch (e) {
-        console.error(e);
-        alert(t.loadFailed);
-        navigate("/admin/courses", { replace: true });
+        setLoading(true);
+        const data = await getCourseById(id);
+        if (!active) return;
+
+        setForm({
+          course_type: data.course_type || "external",
+          title_ua: data.title_ua || "",
+          title_en: data.title_en || "",
+          description_ua: data.description_ua || "",
+          description_en: data.description_en || "",
+          category: data.category || "",
+          tags: tagsToText(data.tags),
+          durationText: data.durationText || "",
+          price: data.price ?? "",
+          link: data.link || "",
+          image: data.image || "",
+          speaker: data.speaker || "",
+          isPublished: Boolean(data.isPublished),
+          chapters:
+            Array.isArray(data.chapters) && data.chapters.length
+              ? data.chapters.map((chapter) => ({
+                  title_ua: chapter.title_ua || "",
+                  title_en: chapter.title_en || "",
+                  description_ua: chapter.description_ua || "",
+                  description_en: chapter.description_en || "",
+                  embeddings:
+                    Array.isArray(chapter.embeddings) && chapter.embeddings.length
+                      ? chapter.embeddings
+                      : [""],
+                }))
+              : [emptyChapter()],
+        });
+      } catch (error) {
+        alert(getBackendError(error, "Failed to load course"));
+        navigate("/admin/courses");
       } finally {
-        if (alive) setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     load();
+
     return () => {
-      alive = false;
+      active = false;
     };
-  }, [id, isEdit, navigate, t.loadFailed]);
+  }, [id, isEdit, navigate]);
 
-  const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  function setField(name, value) {
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
 
-  const onTogglePublished = (v) => {
+  function setChapter(index, name, value) {
+    setForm((prev) => {
+      const next = [...prev.chapters];
+      next[index] = { ...next[index], [name]: value };
+      return { ...prev, chapters: next };
+    });
+  }
+
+  function addChapter() {
     setForm((prev) => ({
       ...prev,
-      isPublished: v,
-      isArchived: v ? false : prev.isArchived,
+      chapters: [...prev.chapters, emptyChapter()],
     }));
-  };
+  }
 
-  const onToggleArchived = (v) => {
-    setForm((prev) => ({
-      ...prev,
-      isArchived: v,
-      isPublished: v ? false : prev.isPublished,
-    }));
-  };
+  function removeChapter(index) {
+    setForm((prev) => {
+      const next = prev.chapters.filter((_, i) => i !== index);
+      return { ...prev, chapters: next.length ? next : [emptyChapter()] };
+    });
+  }
 
-  const onSave = async (e) => {
-    e.preventDefault();
+  function addEmbedding(chapterIndex) {
+    setForm((prev) => {
+      const chapters = [...prev.chapters];
+      const current = chapters[chapterIndex];
 
-    const payload = sanitizePayload(form, tagsText);
-    const errors = validateCourse({ ...form, tags: stringToTags(tagsText) }, lang);
+      chapters[chapterIndex] = {
+        ...current,
+        embeddings: [...(current.embeddings || []), ""],
+      };
 
-    if (errors.length) {
-      alert(errors.join("\n"));
+      return { ...prev, chapters };
+    });
+  }
+
+  function setEmbedding(chapterIndex, embeddingIndex, value) {
+    setForm((prev) => {
+      const chapters = [...prev.chapters];
+      const current = chapters[chapterIndex];
+      const embeddings = [...(current.embeddings || [])];
+
+      embeddings[embeddingIndex] = value;
+
+      chapters[chapterIndex] = {
+        ...current,
+        embeddings,
+      };
+
+      return { ...prev, chapters };
+    });
+  }
+
+  function removeEmbedding(chapterIndex, embeddingIndex) {
+    setForm((prev) => {
+      const chapters = [...prev.chapters];
+      const current = chapters[chapterIndex];
+      const embeddings = (current.embeddings || []).filter(
+        (_, i) => i !== embeddingIndex
+      );
+
+      chapters[chapterIndex] = {
+        ...current,
+        embeddings: embeddings.length ? embeddings : [""],
+      };
+
+      return { ...prev, chapters };
+    });
+  }
+
+  function cleanChapters() {
+    return form.chapters
+      .map((chapter) => ({
+        title_ua: chapter.title_ua.trim() || form.title_ua.trim(),
+        title_en: chapter.title_en.trim() || form.title_en.trim(),
+        description_ua:
+          chapter.description_ua.trim() || form.description_ua.trim(),
+        description_en:
+          chapter.description_en.trim() || form.description_en.trim(),
+        embeddings: normalizeEmbeddings(chapter.embeddings),
+      }))
+      .filter(
+        (chapter) =>
+          chapter.title_ua &&
+          chapter.title_en &&
+          chapter.description_ua &&
+          chapter.description_en
+      );
+  }
+
+  function validate() {
+    if (
+      !form.title_ua.trim() ||
+      !form.title_en.trim() ||
+      !form.description_ua.trim() ||
+      !form.description_en.trim() ||
+      !form.category.trim() ||
+      !form.durationText.trim() ||
+      textToTags(form.tags).length === 0
+    ) {
+      return t.required;
+    }
+
+    if (form.course_type === "external" && !form.link.trim()) {
+      return t.needLink;
+    }
+
+    if (cleanChapters().length === 0) {
+      return t.needChapter;
+    }
+
+    return "";
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+
+    const error = validate();
+    if (error) {
+      alert(error);
       return;
     }
 
-    setSaving(true);
+    const payload = {
+      title_ua: form.title_ua,
+      title_en: form.title_en,
+      description_ua: form.description_ua,
+      description_en: form.description_en,
+      category: form.category,
+      tags: textToTags(form.tags),
+      durationText: form.durationText,
+      price: Number(form.price) || 0,
+      link: form.link || null,
+      image: form.image || null,
+      speaker: form.speaker || null,
+      isPublished: Boolean(form.isPublished),
+      chapters: cleanChapters(),
+    };
+
+    if (!isEdit) {
+      payload.course_type = form.course_type;
+    }
+
     try {
-      if (isEdit) await updateCourse(id, payload);
-      else await createCourse(payload);
-      navigate("/admin/courses", { replace: true });
-    } catch (e2) {
-      console.error(e2);
-      alert(t.saveFailed);
+      setSaving(true);
+
+      if (isEdit) {
+        await updateCourse(id, payload);
+      } else {
+        await createCourse(payload);
+      }
+
+      navigate("/admin/courses");
+    } catch (error) {
+      alert(getBackendError(error, t.fail));
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  if (loading) return <div className="text-slate-600">Loading…</div>;
+  if (loading) {
+    return <div style={{ color: "#fff", fontSize: 13 }}>{t.loading}</div>;
+  }
 
   return (
-    <div className="text-slate-900">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-semibold">{t.title}</h1>
-          <div className="mt-2 text-sm text-slate-500">{t.placeholder}</div>
-        </div>
+    <div style={{ width: "100%", maxWidth: 930 }}>
+      <div style={topRow}>
+        <h1 style={pageTitle}>{t.title}</h1>
 
         <button
           type="button"
           onClick={() => navigate("/admin/courses")}
-          className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+          style={ghostBtn}
         >
           {t.back}
         </button>
       </div>
 
-      <form
-        onSubmit={onSave}
-        className="mt-6 bg-white rounded-xl border border-slate-200 p-6 space-y-6"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InputField
-            label={`Title (UA) (${t.required})`}
-            value={form.title_ua}
-            onChange={(v) => set("title_ua", v)}
-            placeholder="Назва курсу українською"
-          />
-          <InputField
-            label={`Title (EN) (${t.required})`}
-            value={form.title_en}
-            onChange={(v) => set("title_en", v)}
-            placeholder="Course title in English"
-          />
-          <InputField
-            label={`Category (${t.required})`}
-            value={form.category}
-            onChange={(v) => set("category", v)}
-            placeholder="regtech_suptech / ai_finance / ..."
-          />
-          <InputField
-            label={`Duration (${t.required})`}
-            value={form.durationText}
-            onChange={(v) => set("durationText", v)}
-            placeholder='Напр. "20 годин (3 лекції, 2 практичні)"'
-          />
-          <InputField
-            type="number"
-            label={`Price (${t.required})`}
-            value={String(form.price ?? 0)}
-            onChange={(v) => set("price", v)}
-            placeholder="0"
-          />
-          <InputField
-            label="Image URL"
-            value={form.image}
-            onChange={(v) => set("image", v)}
-            placeholder="https://..."
-          />
-          <InputField
-            colSpan
-            label="Original link"
-            value={form.link}
-            onChange={(v) => set("link", v)}
-            placeholder="https://..."
-          />
-          <InputField
-            colSpan
-            label={`Tags (${t.required})`}
-            value={tagsText}
-            onChange={(v) => setTagsText(v)}
-            placeholder={t.tagsHint}
-          />
-          <TextareaField
-            label={`Description (UA) (${t.required})`}
-            value={form.description_ua}
-            onChange={(v) => set("description_ua", v)}
-            placeholder="Опис українською"
-          />
-          <TextareaField
-            label={`Description (EN) (${t.required})`}
-            value={form.description_en}
-            onChange={(v) => set("description_en", v)}
-            placeholder="Description in English"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-6">
-          <Checkbox
-            label={t.publish}
-            checked={form.isPublished}
-            onChange={onTogglePublished}
-          />
-          <Checkbox
-            label={t.archived}
-            checked={form.isArchived}
-            onChange={onToggleArchived}
-          />
-        </div>
-
-        <div className="flex justify-end">
+      <form onSubmit={submit} style={panel}>
+        <div style={tabs}>
           <button
-            type="submit"
-            disabled={saving}
-            className="h-11 px-6 rounded-lg bg-[#2E5D8C] text-white font-medium hover:opacity-95 disabled:opacity-60"
+            type="button"
+            onClick={() => setActiveTab("details")}
+            style={tab(activeTab === "details")}
           >
-            {saving ? "Saving…" : t.save}
+            {t.details}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("content")}
+            style={tab(activeTab === "content")}
+          >
+            {t.content}
+          </button>
+        </div>
+
+        {activeTab === "details" ? (
+          <>
+            <div style={gridTwo}>
+              <div>
+                <Label>{t.courseType}</Label>
+                <select
+                  value={form.course_type}
+                  disabled={isEdit}
+                  onChange={(e) => setField("course_type", e.target.value)}
+                  style={input}
+                >
+                  <option value="external">{t.external}</option>
+                  <option value="internal">{t.internal}</option>
+                </select>
+              </div>
+
+              <Field
+                label={t.category}
+                value={form.category}
+                onChange={(v) => setField("category", v)}
+              />
+
+              <Field
+                label={t.titleUa}
+                value={form.title_ua}
+                onChange={(v) => setField("title_ua", v)}
+              />
+
+              <Field
+                label={t.titleEn}
+                value={form.title_en}
+                onChange={(v) => setField("title_en", v)}
+              />
+
+              <TextArea
+                label={t.descUa}
+                value={form.description_ua}
+                onChange={(v) => setField("description_ua", v)}
+              />
+
+              <TextArea
+                label={t.descEn}
+                value={form.description_en}
+                onChange={(v) => setField("description_en", v)}
+              />
+
+              <Field
+                label={t.tags}
+                value={form.tags}
+                onChange={(v) => setField("tags", v)}
+              />
+
+              <Field
+                label={t.duration}
+                value={form.durationText}
+                onChange={(v) => setField("durationText", v)}
+              />
+
+              <Field
+                label={t.price}
+                type="number"
+                value={form.price}
+                onChange={(v) => setField("price", v)}
+              />
+
+              <Field
+                label={t.speaker}
+                value={form.speaker}
+                onChange={(v) => setField("speaker", v)}
+              />
+
+              <Field
+                label={t.image}
+                value={form.image}
+                onChange={(v) => setField("image", v)}
+              />
+
+              <Field
+                label={t.link}
+                value={form.link}
+                onChange={(v) => setField("link", v)}
+              />
+            </div>
+
+            <label style={checkRow}>
+              <input
+                type="checkbox"
+                checked={form.isPublished}
+                onChange={(e) => setField("isPublished", e.target.checked)}
+              />
+              {t.published}
+            </label>
+          </>
+        ) : (
+          <>
+            <div style={note}>
+              {form.course_type === "external" ? t.externalInfo : t.internalInfo}
+            </div>
+
+            <div style={{ display: "grid", gap: 14 }}>
+              {form.chapters.map((chapter, chapterIndex) => (
+                <div key={chapterIndex} style={chapterBox}>
+                  <div style={chapterTop}>
+                    <strong>
+                      {t.chapter} {chapterIndex + 1}
+                    </strong>
+
+                    <button
+                      type="button"
+                      onClick={() => removeChapter(chapterIndex)}
+                      style={smallDanger}
+                    >
+                      {t.remove}
+                    </button>
+                  </div>
+
+                  <div style={gridTwo}>
+                    <Field
+                      label={t.chapterTitleUa}
+                      value={chapter.title_ua}
+                      onChange={(v) =>
+                        setChapter(chapterIndex, "title_ua", v)
+                      }
+                    />
+
+                    <Field
+                      label={t.chapterTitleEn}
+                      value={chapter.title_en}
+                      onChange={(v) =>
+                        setChapter(chapterIndex, "title_en", v)
+                      }
+                    />
+
+                    <TextArea
+                      label={t.chapterTextUa}
+                      value={chapter.description_ua}
+                      onChange={(v) =>
+                        setChapter(chapterIndex, "description_ua", v)
+                      }
+                    />
+
+                    <TextArea
+                      label={t.chapterTextEn}
+                      value={chapter.description_en}
+                      onChange={(v) =>
+                        setChapter(chapterIndex, "description_en", v)
+                      }
+                    />
+
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <Label>{t.extraLinks}</Label>
+
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {(chapter.embeddings || [""]).map((url, embeddingIndex) => (
+                          <div key={embeddingIndex} style={extraRow}>
+                            <input
+                              value={url}
+                              placeholder={t.extraPlaceholder}
+                              onChange={(e) =>
+                                setEmbedding(
+                                  chapterIndex,
+                                  embeddingIndex,
+                                  e.target.value
+                                )
+                              }
+                              style={input}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeEmbedding(chapterIndex, embeddingIndex)
+                              }
+                              style={smallDanger}
+                              title={t.removeExtra}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => addEmbedding(chapterIndex)}
+                        style={addExtraBtn}
+                      >
+                        {t.addExtra}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button type="button" onClick={addChapter} style={addBtn}>
+                {t.addChapter}
+              </button>
+            </div>
+          </>
+        )}
+
+        <div style={bottomRow}>
+          <button type="submit" disabled={saving} style={saveBtn}>
+            {saving ? t.saving : t.save}
           </button>
         </div>
       </form>
@@ -320,44 +622,215 @@ export default function AdminCourseEditorPage() {
   );
 }
 
-function InputField({ label, value, onChange, type = "text", colSpan, placeholder }) {
+function Label({ children }) {
+  return <div style={label}>{children}</div>;
+}
+
+function Field({ label: text, value, onChange, type = "text" }) {
   return (
-    <div className={colSpan ? "md:col-span-2" : ""}>
-      <div className="text-sm font-medium text-slate-900">{label}</div>
+    <div>
+      <Label>{text}</Label>
       <input
-        type={type}
         value={value ?? ""}
+        type={type}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-2 w-full h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#2E5D8C]/20"
+        style={input}
       />
     </div>
   );
 }
 
-function TextareaField({ label, value, onChange, placeholder }) {
+function TextArea({ label: text, value, onChange }) {
   return (
-    <div className="md:col-span-2">
-      <div className="text-sm font-medium text-slate-900">{label}</div>
+    <div>
+      <Label>{text}</Label>
       <textarea
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-2 w-full min-h-[140px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#2E5D8C]/20"
+        style={textarea}
       />
     </div>
   );
 }
 
-function Checkbox({ label, checked, onChange }) {
-  return (
-    <label className="flex items-center gap-2 text-sm text-slate-800">
-      <input
-        type="checkbox"
-        checked={Boolean(checked)}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span>{label}</span>
-    </label>
-  );
+const topRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 14,
+};
+
+const pageTitle = {
+  margin: 0,
+  color: "#fff",
+  fontSize: 20,
+  fontWeight: 800,
+};
+
+const panel = {
+  background: "rgba(255,255,255,0.96)",
+  borderRadius: 20,
+  padding: 22,
+};
+
+const tabs = {
+  display: "flex",
+  gap: 8,
+  marginBottom: 18,
+};
+
+function tab(active) {
+  return {
+    height: 34,
+    padding: "0 18px",
+    borderRadius: "999px",
+    border: "1px solid rgba(8,41,71,0.18)",
+    background: active ? "#082947" : "#EEF3F8",
+    color: active ? "#fff" : "#20324A",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+  };
 }
+
+const gridTwo = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 14,
+};
+
+const label = {
+  color: "#20324A",
+  fontSize: 12,
+  fontWeight: 700,
+  marginBottom: 6,
+};
+
+const input = {
+  width: "100%",
+  height: 38,
+  borderRadius: 999,
+  border: "1px solid rgba(0,0,0,0.18)",
+  padding: "0 14px",
+  outline: "none",
+  fontSize: 12,
+  color: "#20324A",
+  background: "#fff",
+};
+
+const textarea = {
+  ...input,
+  height: 120,
+  borderRadius: 14,
+  padding: 12,
+  resize: "vertical",
+};
+
+const checkRow = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginTop: 18,
+  color: "#20324A",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const note = {
+  background: "#EEF3F8",
+  color: "#20324A",
+  borderRadius: 14,
+  padding: 14,
+  fontSize: 12,
+  lineHeight: 1.6,
+  marginBottom: 16,
+};
+
+const chapterBox = {
+  background: "#F7F9FC",
+  border: "1px solid rgba(0,0,0,0.1)",
+  borderRadius: 18,
+  padding: 16,
+};
+
+const chapterTop = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 12,
+  color: "#20324A",
+  fontSize: 13,
+};
+
+const extraRow = {
+  display: "grid",
+  gridTemplateColumns: "1fr 34px",
+  gap: 8,
+  alignItems: "center",
+};
+
+const bottomRow = {
+  display: "flex",
+  justifyContent: "flex-end",
+  marginTop: 22,
+};
+
+const saveBtn = {
+  minWidth: 140,
+  height: 38,
+  borderRadius: 999,
+  border: "none",
+  background: "#B3131A",
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+const addBtn = {
+  width: 150,
+  height: 34,
+  borderRadius: 999,
+  border: "none",
+  background: "#082947",
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const addExtraBtn = {
+  marginTop: 10,
+  minWidth: 160,
+  height: 32,
+  borderRadius: 999,
+  border: "none",
+  background: "#082947",
+  color: "#fff",
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const ghostBtn = {
+  height: 32,
+  padding: "0 14px",
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "transparent",
+  color: "#fff",
+  fontSize: 12,
+  cursor: "pointer",
+};
+
+const smallDanger = {
+  height: 28,
+  minWidth: 28,
+  borderRadius: 999,
+  border: "none",
+  background: "#B3131A",
+  color: "#fff",
+  fontSize: 14,
+  padding: "0 10px",
+  cursor: "pointer",
+};

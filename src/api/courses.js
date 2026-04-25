@@ -6,6 +6,10 @@ function toNumberOrUndef(value) {
   return Number.isFinite(number) ? number : undefined;
 }
 
+function normalizeRequiredString(value) {
+  return String(value ?? "").trim();
+}
+
 function normalizeOptionalString(value) {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -14,13 +18,62 @@ function normalizeOptionalString(value) {
   return stringValue === "" ? null : stringValue;
 }
 
-function normalizeRequiredString(value) {
-  return String(value ?? "").trim();
+function normalizeTags(tags) {
+  if (Array.isArray(tags)) {
+    return tags.map((tag) => String(tag).trim()).filter(Boolean);
+  }
+
+  if (typeof tags === "string") {
+    return tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeEmbeddings(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeChapters(chapters) {
+  if (!Array.isArray(chapters)) return null;
+
+  const clean = chapters
+    .map((chapter) => ({
+      title_ua: normalizeRequiredString(chapter.title_ua),
+      title_en: normalizeRequiredString(chapter.title_en),
+      description_ua: normalizeRequiredString(chapter.description_ua),
+      description_en: normalizeRequiredString(chapter.description_en),
+      embeddings: normalizeEmbeddings(chapter.embeddings),
+    }))
+    .filter(
+      (chapter) =>
+        chapter.title_ua &&
+        chapter.title_en &&
+        chapter.description_ua &&
+        chapter.description_en
+    );
+
+  return clean.length > 0 ? clean : null;
 }
 
 export async function getCourses(params = {}) {
   const {
     tags,
+    course_type,
     title,
     description,
     category,
@@ -41,6 +94,7 @@ export async function getCourses(params = {}) {
   if (description) query.description = description;
   if (category) query.category = category;
   if (durationText) query.durationText = durationText;
+  if (course_type) query.course_type = course_type;
 
   const min = toNumberOrUndef(priceMin ?? price_min);
   const max = toNumberOrUndef(priceMax ?? price_max);
@@ -52,8 +106,9 @@ export async function getCourses(params = {}) {
     query.isPublished = isPublished;
   }
 
-  if (Array.isArray(tags) && tags.length > 0) {
-    query.tags = tags;
+  const cleanTags = normalizeTags(tags);
+  if (cleanTags.length > 0) {
+    query.tags = cleanTags;
   }
 
   query.page = Number(page) || 1;
@@ -69,13 +124,16 @@ export async function getCourseById(id) {
 }
 
 export async function createCourse(payload = {}) {
+  const courseType = payload.course_type || "external";
+
   const clean = {
+    course_type: courseType,
     title_ua: normalizeRequiredString(payload.title_ua),
     title_en: normalizeRequiredString(payload.title_en),
     description_ua: normalizeRequiredString(payload.description_ua),
     description_en: normalizeRequiredString(payload.description_en),
     category: normalizeRequiredString(payload.category),
-    tags: Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [],
+    tags: normalizeTags(payload.tags),
     durationText: normalizeRequiredString(payload.durationText),
     price: toNumberOrUndef(payload.price) ?? 0,
     link: normalizeOptionalString(payload.link),
@@ -83,6 +141,10 @@ export async function createCourse(payload = {}) {
     image: normalizeOptionalString(payload.image),
     isPublished: Boolean(payload.isPublished),
   };
+
+  if (courseType === "internal") {
+    clean.chapters = normalizeChapters(payload.chapters);
+  }
 
   const { data } = await client.post("/courses/", clean);
   return data;
@@ -132,11 +194,15 @@ export async function updateCourse(id, payload = {}) {
   }
 
   if (payload.tags !== undefined) {
-    clean.tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : [];
+    clean.tags = normalizeTags(payload.tags);
   }
 
   if (payload.isPublished !== undefined) {
     clean.isPublished = Boolean(payload.isPublished);
+  }
+
+  if (payload.chapters !== undefined) {
+    clean.chapters = normalizeChapters(payload.chapters);
   }
 
   const { data } = await client.patch(`/courses/${id}`, clean);

@@ -27,18 +27,20 @@ function normalizeCoursesResponse(payload) {
   };
 }
 
-function formatSections(course) {
-  if (typeof course?.sections_count === "number") {
-    return `${course.sections_count} Sections`;
-  }
-  return `${course?.tags?.length || 0} Sections`;
+function formatSections(course, lang) {
+  const count = Array.isArray(course?.chapters)
+    ? course.chapters.length
+    : course?.tags?.length || 0;
+
+  return lang === "ua" ? `${count} глав` : `${count} chapters`;
 }
 
-function formatStudents(course) {
-  if (typeof course?.students_count === "number") {
-    return `${course.students_count} students`;
+function formatType(course, lang) {
+  if (course?.course_type === "internal") {
+    return lang === "ua" ? "Внутрішній" : "Internal";
   }
-  return "0 students";
+
+  return lang === "ua" ? "Зовнішній" : "External";
 }
 
 function getBackendError(error, fallback) {
@@ -62,6 +64,7 @@ export default function AdminCoursesPage() {
   const [courses, setCourses] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [courseType, setCourseType] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({
@@ -77,6 +80,9 @@ export default function AdminCoursesPage() {
       title: lang === "ua" ? "УСІ КУРСИ" : "ALL COURSES",
       search: lang === "ua" ? "ПОШУК" : "SEARCH",
       category: lang === "ua" ? "УСІ КАТЕГОРІЇ..." : "ALL CATEGORIES...",
+      typeAll: lang === "ua" ? "УСІ ТИПИ..." : "ALL TYPES...",
+      external: lang === "ua" ? "Зовнішні" : "External",
+      internal: lang === "ua" ? "Внутрішні" : "Internal",
       statusAll: lang === "ua" ? "УСІ СТАТУСИ..." : "ALL STATUSES...",
       published: lang === "ua" ? "Опубліковано" : "Published",
       unpublished: lang === "ua" ? "Неопубліковано" : "Unpublished",
@@ -85,6 +91,10 @@ export default function AdminCoursesPage() {
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
       prev: lang === "ua" ? "Назад" : "Prev",
       next: lang === "ua" ? "Далі" : "Next",
+      edit: lang === "ua" ? "Редагувати курс" : "Edit course",
+      delete: lang === "ua" ? "Видалити курс" : "Delete course",
+      changeStatus:
+        lang === "ua" ? "Змінити статус публікації" : "Change publish status",
       deleteConfirm:
         lang === "ua"
           ? "Точно видалити цей курс?"
@@ -109,6 +119,7 @@ export default function AdminCoursesPage() {
         page_size: 20,
         title: search.trim() || undefined,
         category: category.trim() || undefined,
+        course_type: courseType || undefined,
         isPublished:
           status === "published" ? true : status === "unpublished" ? false : undefined,
       });
@@ -202,8 +213,8 @@ export default function AdminCoursesPage() {
         onSubmit={handleFilterSubmit}
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr 124px",
-          gap: "12px",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr 124px",
+          gap: "10px",
           alignItems: "center",
           marginBottom: "16px",
         }}
@@ -226,6 +237,16 @@ export default function AdminCoursesPage() {
           placeholder={t.category}
           style={filterStyle}
         />
+
+        <select
+          value={courseType}
+          onChange={(e) => setCourseType(e.target.value)}
+          style={filterStyle}
+        >
+          <option value="">{t.typeAll}</option>
+          <option value="external">{t.external}</option>
+          <option value="internal">{t.internal}</option>
+        </select>
 
         <select
           value={status}
@@ -257,11 +278,11 @@ export default function AdminCoursesPage() {
               key={course.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "1.9fr 0.8fr 0.8fr 1fr 78px",
+                gridTemplateColumns: "1.8fr 0.75fr 0.75fr 1fr 82px",
                 gap: "10px",
                 alignItems: "center",
-                minHeight: "32px",
-                borderRadius: "6px",
+                minHeight: "34px",
+                borderRadius: "7px",
                 background: "rgba(255,255,255,0.96)",
                 padding: "0 12px",
                 color: "#20324A",
@@ -285,25 +306,32 @@ export default function AdminCoursesPage() {
                     flexShrink: 0,
                   }}
                 />
+
                 <span
                   style={{
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    fontWeight: 500,
+                    fontWeight: 600,
                   }}
                 >
                   {getLocalizedCourseTitle(course, lang)}
                 </span>
               </div>
 
-              <div style={{ color: "#7A7F87" }}>{formatSections(course)}</div>
-              <div style={{ color: "#7A7F87" }}>{formatStudents(course)}</div>
+              <div style={{ color: "#7A7F87" }}>
+                {formatSections(course, lang)}
+              </div>
+
+              <div style={{ color: "#7A7F87" }}>
+                {formatType(course, lang)}
+              </div>
 
               <button
                 type="button"
                 disabled={busyId === course.id}
                 onClick={() => handleTogglePublish(course)}
+                title={t.changeStatus}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -352,16 +380,17 @@ export default function AdminCoursesPage() {
                   display: "flex",
                   justifyContent: "flex-end",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: "9px",
                 }}
               >
                 <button
                   type="button"
                   onClick={() => navigate(`/admin/courses/${course.id}`)}
                   style={iconButtonStyle}
-                  title="Edit"
+                  title={t.edit}
+                  aria-label={t.edit}
                 >
-                  ○
+                  ✎
                 </button>
 
                 <button
@@ -369,7 +398,8 @@ export default function AdminCoursesPage() {
                   disabled={busyId === course.id}
                   onClick={() => handleDelete(course.id)}
                   style={{ ...iconButtonStyle, color: "#B3131A" }}
-                  title="Delete"
+                  title={t.delete}
+                  aria-label={t.delete}
                 >
                   🗑
                 </button>
@@ -468,13 +498,19 @@ const emptyRowStyle = {
 };
 
 const iconButtonStyle = {
-  border: "none",
-  background: "transparent",
+  width: "18px",
+  height: "18px",
+  borderRadius: "50%",
+  border: "1px solid rgba(0,0,0,0.12)",
+  background: "rgba(255,255,255,0.88)",
   cursor: "pointer",
   fontSize: "11px",
   lineHeight: 1,
   padding: 0,
-  color: "#8B9199",
+  color: "#6C7480",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
 };
 
 function pageButtonStyle(disabled) {
