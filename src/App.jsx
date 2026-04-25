@@ -49,6 +49,7 @@ export default function App() {
           >
             <Route index element={<UserCabinetPage />} />
             <Route path="courses" element={<UserCoursesPage />} />
+            <Route path="settings" element={<UserCabinetPage />} />
           </Route>
         </Route>
 

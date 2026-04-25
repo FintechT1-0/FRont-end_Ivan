@@ -1,89 +1,118 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { NavLink, Outlet } from "react-router-dom";
 import Logo from "../assets/Logo.png";
+import { useLang } from "../context/LanguageContext";
 
-const linkBase =
-  "block rounded-2xl px-4 py-3 text-white/85 hover:text-white hover:bg-white/10 transition";
-const linkActive = "bg-white/15 text-white";
+export default function UserLayout() {
+  const { lang } = useLang();
 
-function SidebarLink({ to, children, end }) {
+  const t = {
+    dashboard: lang === "ua" ? "Панель" : "Dashboard",
+    courses: lang === "ua" ? "Мої курси" : "My courses",
+    settings: lang === "ua" ? "Налаштування" : "Settings",
+    support: lang === "ua" ? "Допомога та підтримка" : "Help & Support",
+  };
+
+  return (
+    <div style={page}>
+      <aside style={sidebar}>
+        <div style={logoBox}>
+          <img src={Logo} alt="FinTech UniVerse" style={logo} />
+        </div>
+
+        <nav style={nav}>
+          <SideLink to="/cabinet" end>
+            {t.dashboard}
+          </SideLink>
+
+          <SideLink to="/cabinet/courses">
+            {t.courses}
+          </SideLink>
+
+          <SideLink to="/cabinet/settings">
+            {t.settings}
+          </SideLink>
+        </nav>
+
+        <div style={support}>{t.support}</div>
+      </aside>
+
+      <main style={content}>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function SideLink({ to, children, end = false }) {
   return (
     <NavLink
       to={to}
       end={end}
-      className={({ isActive }) => `${linkBase} ${isActive ? linkActive : ""}`}
+      style={({ isActive }) => ({
+        minHeight: "44px",
+        padding: "0 18px",
+        borderRadius: "999px",
+        display: "flex",
+        alignItems: "center",
+        color: "#FFFFFF",
+        textDecoration: "none",
+        fontSize: "15px",
+        fontWeight: isActive ? 800 : 600,
+        background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
+        border: isActive
+          ? "1px solid rgba(255,255,255,0.16)"
+          : "1px solid transparent",
+      })}
     >
       {children}
     </NavLink>
   );
 }
 
-export default function UserLayout() {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
-  const [open, setOpen] = useState(true);
+const page = {
+  minHeight: "100vh",
+  display: "grid",
+  gridTemplateColumns: "260px 1fr",
+  background: "#082947",
+};
 
-  const sidebarW = open ? 300 : 92;
+const sidebar = {
+  background:
+    "linear-gradient(180deg, rgba(10,42,73,0.98) 0%, rgba(6,31,56,0.98) 100%)",
+  padding: "28px 24px",
+  display: "flex",
+  flexDirection: "column",
+};
 
-  const onLogout = () => {
-    logout();
-    navigate("/", { replace: true });
-  };
+const logoBox = {
+  width: "140px",
+  height: "58px",
+  borderRadius: "999px",
+  background: "linear-gradient(180deg, #123A61 0%, #082947 100%)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: "34px",
+};
 
-  return (
-    <div className="bg-[#0E3A73] text-white min-h-[90vh]">
-      <div className="max-w-[1280px] mx-auto px-6 py-10">
-        <div className="rounded-[44px] overflow-hidden bg-[#2E5D8C]/90 shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
-          <div className="flex min-h-[760px] relative">
-            <aside
-              className="bg-[#0B2F5A] shrink-0 transition-[width] duration-300 ease-out relative"
-              style={{ width: sidebarW }}
-            >
-              <div className="h-20 px-5 flex items-center gap-3">
-                <img src={Logo} alt="FinTech UniVerse" className="h-9 w-auto" />
-                {open ? (
-                  <div className="text-white/90 text-lg font-medium tracking-wide">
-                    Cabinet
-                  </div>
-                ) : null}
-              </div>
+const logo = {
+  width: "42px",
+  height: "42px",
+  objectFit: "contain",
+};
 
-              <div className={`px-4 ${open ? "" : "hidden"}`}>
-                <div className="space-y-2">
-                  <SidebarLink to="/cabinet" end>
-                    Dashboard
-                  </SidebarLink>
-                  <SidebarLink to="/cabinet/courses">My courses</SidebarLink>
-                </div>
-              </div>
+const nav = {
+  display: "grid",
+  gap: "16px",
+};
 
-              <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="absolute top1/4 -right-5 -translate-y-1/2 h-11 w-11 rounded-full bg-white text-[#0B2F5A] shadow-[0_10px_25px_rgba(0,0,0,0.25)] grid place-items-center"
-                aria-label="Toggle sidebar"
-              >
-                <span className="text-2xl leading-none">{open ? "‹" : "›"}</span>
-              </button>
+const support = {
+  marginTop: "auto",
+  color: "rgba(255,255,255,0.82)",
+  fontSize: "14px",
+  fontWeight: 600,
+};
 
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="w-full rounded-2xl bg-white text-[#0B2F5A] py-3 font-medium hover:opacity-95 transition"
-                >
-                  Logout
-                </button>
-              </div>
-            </aside>
-
-            <main className="flex-1 p-8 md:p-10">
-              <Outlet />
-            </main>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+const content = {
+  minWidth: 0,
+};
