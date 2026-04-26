@@ -90,6 +90,23 @@ export default function UserCabinetPage() {
     };
   }, [t.fail]);
 
+  const futureUserFeatures = (
+    <div style={sectionLast}>
+      <div>
+        <h2 style={h2}>{t.extra}</h2>
+        <p style={hint}>{t.devText}</p>
+      </div>
+
+      <div style={extraGrid}>
+        <DevCard title={t.saved} badge={t.dev} />
+        <DevCard title={t.viewed} badge={t.dev} />
+        <DevCard title={t.recs} badge={t.dev} />
+      </div>
+    </div>
+  );
+
+  void futureUserFeatures;
+
   return (
     <div style={page}>
       <div style={wrap}>
@@ -123,7 +140,7 @@ export default function UserCabinetPage() {
               </div>
             </div>
 
-            <div style={section}>
+            <div style={sectionLast}>
               <div>
                 <h2 style={h2}>{t.ai}</h2>
                 <p style={hint}>{t.aiText}</p>
@@ -140,18 +157,8 @@ export default function UserCabinetPage() {
               </div>
             </div>
 
-            <div style={sectionLast}>
-              <div>
-                <h2 style={h2}>{t.extra}</h2>
-                <p style={hint}>{t.devText}</p>
-              </div>
-
-              <div style={extraGrid}>
-                <DevCard title={t.saved} badge={t.dev} />
-                <DevCard title={t.viewed} badge={t.dev} />
-                <DevCard title={t.recs} badge={t.dev} />
-              </div>
-            </div>
+            {/* TODO: enable when backend supports user history and recommendations */}
+            {/* {futureUserFeatures} */}
           </div>
         ) : null}
       </div>

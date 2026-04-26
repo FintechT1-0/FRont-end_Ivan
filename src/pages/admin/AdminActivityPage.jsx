@@ -166,6 +166,36 @@ export default function AdminActivityPage() {
 
   const maxDailyValue = Math.max(...dailyRows.map((item) => item.value), 1);
 
+  // TODO: enable when backend returns:
+  // - popular tags
+  // - popular courses
+  // - popular insights
+  // Suggested endpoints:
+  // - /telemetry/popular-tags?since=7
+  // - /telemetry/popular-courses?since=7
+  // - /telemetry/popular-insights?since=7
+  const futureTelemetry = (
+    <div style={disabledGrid}>
+      <DisabledPanel
+        title={t.popularTags}
+        text={t.inProgressText}
+        badge={t.inProgress}
+      />
+      <DisabledPanel
+        title={t.popularCourses}
+        text={t.inProgressText}
+        badge={t.inProgress}
+      />
+      <DisabledPanel
+        title={t.popularInsights}
+        text={t.inProgressText}
+        badge={t.inProgress}
+      />
+    </div>
+  );
+
+  void futureTelemetry;
+
   return (
     <div style={{ width: "100%", maxWidth: "930px" }}>
       <div style={headerRow}>
@@ -284,11 +314,8 @@ export default function AdminActivityPage() {
             </div>
           </div>
 
-          <div style={disabledGrid}>
-            <DisabledPanel title={t.popularTags} text={t.inProgressText} badge={t.inProgress} />
-            <DisabledPanel title={t.popularCourses} text={t.inProgressText} badge={t.inProgress} />
-            <DisabledPanel title={t.popularInsights} text={t.inProgressText} badge={t.inProgress} />
-          </div>
+          {/* TODO: enable when backend supports extended telemetry */}
+          {/* {futureTelemetry} */}
         </>
       )}
     </div>
