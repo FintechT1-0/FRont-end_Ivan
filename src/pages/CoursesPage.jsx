@@ -85,6 +85,7 @@ export default function CoursesPage() {
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
       empty: lang === "ua" ? "Курсів не знайдено" : "No courses found",
       free: lang === "ua" ? "Безкоштовно" : "Free",
+      noImage: lang === "ua" ? "Немає зображення" : "No image",
     };
   }, [lang]);
 
@@ -106,22 +107,10 @@ export default function CoursesPage() {
       const normalized = normalizeCourses(data);
       setAllCourses(normalized);
 
-      const maxDuration = Math.max(
-        ...normalized.map((course) => getDurationNumber(course.durationText)),
-        0
-      );
-
       setFilters((prev) => ({
         ...prev,
         durationMax: 0,
       }));
-
-      if (!maxDuration) {
-        setFilters((prev) => ({
-          ...prev,
-          durationMax: 0,
-        }));
-      }
     } catch (error) {
       console.error("Failed to load courses:", error);
       setAllCourses([]);
@@ -163,7 +152,10 @@ export default function CoursesPage() {
       if (filters.price === "middle" && (price < 50 || price > 200)) return false;
       if (filters.price === "high" && price < 200) return false;
 
-      if (Number(filters.durationMax) > 0 && duration > Number(filters.durationMax)) {
+      if (
+        Number(filters.durationMax) > 0 &&
+        duration > Number(filters.durationMax)
+      ) {
         return false;
       }
 
@@ -271,7 +263,9 @@ export default function CoursesPage() {
                 min="0"
                 max={maxDuration || 1}
                 value={filters.durationMax}
-                onChange={(e) => setFilter("durationMax", Number(e.target.value))}
+                onChange={(e) =>
+                  setFilter("durationMax", Number(e.target.value))
+                }
                 style={range}
               />
             </div>
@@ -290,31 +284,44 @@ export default function CoursesPage() {
               {filteredCourses.map((course) => (
                 <article key={course.id} style={card}>
                   <div style={imageBox}>
-                    <SafeImage
-                      src={course.image}
-                      alt={getTitle(course, lang)}
-                      className="w-full h-full object-cover"
-                    />
+                    {course.image ? (
+                      <SafeImage
+                        src={course.image}
+                        alt={getTitle(course, lang)}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
+                      <div style={imageFallback}>{t.noImage}</div>
+                    )}
                   </div>
 
                   <div style={cardBody}>
                     <div style={courseType}>
-                      {course.course_type === "internal" ? t.internal : t.external}
+                      {course.course_type === "internal"
+                        ? t.internal
+                        : t.external}
                     </div>
 
                     <h2 style={courseTitle}>{getTitle(course, lang)}</h2>
 
-                    <p style={description}>
-                      {getDescription(course, lang)}
-                    </p>
+                    <p style={description}>{getDescription(course, lang)}</p>
 
                     <div style={meta}>
-                      <span>{course.category}</span>
-                      <span>{course.durationText}</span>
+                      <span>{course.category || "-"}</span>
+                      <span>{course.durationText || "-"}</span>
                     </div>
 
                     <div style={meta}>
-                      <span>{course.price > 0 ? `${course.price}$` : t.free}</span>
+                      <span>
+                        {Number(course.price) > 0
+                          ? `${course.price}$`
+                          : t.free}
+                      </span>
                       <span>
                         {Array.isArray(course.tags)
                           ? course.tags.slice(0, 2).join(", ")
@@ -430,32 +437,55 @@ const message = {
 
 const grid = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   gap: "22px",
+  alignItems: "stretch",
 };
 
 const card = {
+  minHeight: "560px",
   borderRadius: "24px",
   overflow: "hidden",
   background:
     "linear-gradient(180deg, rgba(19,54,90,0.78) 0%, rgba(10,37,67,0.88) 100%)",
   border: "1px solid rgba(255,255,255,0.10)",
   boxShadow: "0 18px 40px rgba(0,0,0,0.24)",
+  display: "flex",
+  flexDirection: "column",
 };
 
 const imageBox = {
-  height: "170px",
+  width: "100%",
+  aspectRatio: "16 / 9",
+  minHeight: "190px",
+  maxHeight: "190px",
   background: "#6F86A4",
   overflow: "hidden",
+  flexShrink: 0,
+};
+
+const imageFallback = {
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "rgba(255,255,255,0.7)",
+  fontSize: "13px",
+  fontWeight: 700,
 };
 
 const cardBody = {
   padding: "16px",
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
 };
 
 const courseType = {
   display: "inline-flex",
   alignItems: "center",
+  alignSelf: "flex-start",
   minHeight: "24px",
   padding: "0 10px",
   borderRadius: "999px",
@@ -472,14 +502,24 @@ const courseTitle = {
   fontWeight: 800,
   margin: "0 0 8px",
   lineHeight: 1.25,
+  minHeight: "46px",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
 };
 
 const description = {
   color: "rgba(255,255,255,0.78)",
   fontSize: "13px",
   lineHeight: 1.5,
-  minHeight: "58px",
+  minHeight: "118px",
+  maxHeight: "118px",
   margin: "0 0 12px",
+  display: "-webkit-box",
+  WebkitLineClamp: 6,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
 };
 
 const meta = {
@@ -489,10 +529,11 @@ const meta = {
   color: "rgba(255,255,255,0.68)",
   fontSize: "12px",
   marginTop: "8px",
+  minHeight: "18px",
 };
 
 const button = {
-  marginTop: "16px",
+  marginTop: "auto",
   height: "38px",
   borderRadius: "999px",
   background: RED,
