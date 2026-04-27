@@ -69,6 +69,7 @@ export default function CourseDetailsPage() {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeChapter, setActiveChapter] = useState(0);
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
 
   const isLoggedIn = Boolean(user);
   const chapters = Array.isArray(course?.chapters) ? course.chapters : [];
@@ -95,28 +96,26 @@ export default function CourseDetailsPage() {
       external: lang === "ua" ? "Зовнішній курс" : "External course",
       internal: lang === "ua" ? "Внутрішній курс" : "Internal course",
       chapters: lang === "ua" ? "Глави курсу" : "Course chapters",
-      resources: lang === "ua" ? "Додаткові ресурси" : "Extra resources",
-      publicTitle:
-        lang === "ua"
-          ? "Доступно всім користувачам"
-          : "Available to all users",
-      publicText:
-        lang === "ua"
-          ? "Базова інформація про курс доступна без реєстрації."
-          : "Basic course information is available without registration.",
+      resources: lang === "ua" ? "Extra матеріали" : "Extra materials",
       privateTitle:
         lang === "ua"
-          ? "Доступно лише зареєстрованим користувачам"
-          : "Available only to registered users",
+          ? "Увійди або зареєструйся"
+          : "Sign in or register",
       privateText:
         lang === "ua"
-          ? "Увійди або зареєструйся, щоб отримати доступ до додаткових відео та ресурсів."
-          : "Sign in or register to access extra videos and resources.",
-      login: lang === "ua" ? "Увійти / Зареєструватися" : "Sign in / Register",
+          ? "Extra матеріали доступні тільки зареєстрованим користувачам."
+          : "Extra materials are available only for registered users.",
+      signIn: lang === "ua" ? "Увійти" : "Sign in",
+      register: lang === "ua" ? "Зареєструватися" : "Register",
+      openExtra:
+        lang === "ua"
+          ? "Відкрити extra матеріали"
+          : "Open extra materials",
       noChapters:
         lang === "ua"
           ? "Глави для цього курсу ще не додані."
           : "Chapters have not been added yet.",
+      resource: lang === "ua" ? "Ресурс" : "Resource",
     };
   }, [lang]);
 
@@ -128,7 +127,9 @@ export default function CourseDetailsPage() {
         setLoading(true);
         const data = await getCourseById(id);
         if (!active) return;
+
         setCourse(data);
+        setActiveChapter(0);
       } catch (error) {
         console.error(error);
         if (!active) return;
@@ -146,18 +147,28 @@ export default function CourseDetailsPage() {
   }, [id]);
 
   if (loading) {
-    return <div style={page}><div style={center}>{t.loading}</div></div>;
+    return (
+      <div style={page}>
+        <div style={center}>{t.loading}</div>
+      </div>
+    );
   }
 
   if (!course) {
-    return <div style={page}><div style={center}>{t.notFound}</div></div>;
+    return (
+      <div style={page}>
+        <div style={center}>{t.notFound}</div>
+      </div>
+    );
   }
 
   return (
     <div style={page}>
       <div style={{ maxWidth: "1180px", margin: "0 auto" }}>
         <div style={{ marginBottom: "18px" }}>
-          <Link to="/courses" style={backLink}>← {t.back}</Link>
+          <Link to="/courses" style={backLink}>
+            ← {t.back}
+          </Link>
         </div>
 
         <section style={hero}>
@@ -178,12 +189,13 @@ export default function CourseDetailsPage() {
             </div>
 
             <h1 style={title}>{getTitle(course, lang)}</h1>
-
             <p style={text}>{getDescription(course, lang)}</p>
 
             <div style={meta}>
               <span>{course.durationText}</span>
-              <span>{Number(course.price) > 0 ? `${course.price} $` : t.free}</span>
+              <span>
+                {Number(course.price) > 0 ? `${course.price} $` : t.free}
+              </span>
               {course.speaker ? <span>{course.speaker}</span> : null}
             </div>
 
@@ -201,9 +213,11 @@ export default function CourseDetailsPage() {
             <p style={text}>{getDescription(course, lang)}</p>
 
             {Array.isArray(course.tags) && course.tags.length > 0 ? (
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "16px" }}>
+              <div style={tagsWrap}>
                 {course.tags.map((tag) => (
-                  <span key={tag} style={badge}>{tag}</span>
+                  <span key={tag} style={badge}>
+                    {tag}
+                  </span>
                 ))}
               </div>
             ) : null}
@@ -215,15 +229,15 @@ export default function CourseDetailsPage() {
             <InfoRow label={t.duration} value={course.durationText || "-"} />
             <InfoRow label={t.format} value={t.online} />
             <InfoRow label={t.type} value={isInternal ? t.internal : t.external} />
-            <InfoRow label={t.price} value={Number(course.price) > 0 ? `${course.price} $` : t.free} />
-            {course.speaker ? <InfoRow label={t.speaker} value={course.speaker} /> : null}
+            <InfoRow
+              label={t.price}
+              value={Number(course.price) > 0 ? `${course.price} $` : t.free}
+            />
+            {course.speaker ? (
+              <InfoRow label={t.speaker} value={course.speaker} />
+            ) : null}
           </aside>
         </div>
-
-        <section style={{ ...section, marginTop: "22px", borderColor: "rgba(83,171,255,0.35)" }}>
-          <h2 style={sectionTitle}>{t.publicTitle}</h2>
-          <p style={text}>{t.publicText}</p>
-        </section>
 
         {isInternal ? (
           <section style={{ ...section, marginTop: "22px" }}>
@@ -236,7 +250,7 @@ export default function CourseDetailsPage() {
                 <div style={tabs}>
                   {chapters.map((chapter, index) => (
                     <button
-                      key={`${chapter.title_ua}-${index}`}
+                      key={`${chapter.title_ua || chapter.title_en}-${index}`}
                       type="button"
                       onClick={() => setActiveChapter(index)}
                       style={chapterTab(activeChapter === index)}
@@ -246,7 +260,7 @@ export default function CourseDetailsPage() {
                   ))}
                 </div>
 
-                <div style={chapterBox}>
+                <div style={chapterBox} key={`chapter-${activeChapter}`}>
                   <h3 style={chapterTitle}>
                     {getChapterTitle(activeChapterData, lang)}
                   </h3>
@@ -264,29 +278,36 @@ export default function CourseDetailsPage() {
                         <div style={resourcesGrid}>
                           {activeChapterData.embeddings.map((url, index) =>
                             isYoutube(url) ? (
-                              <div key={url} style={resourceCard}>
+                              <div key={`${activeChapter}-${url}-${index}`} style={resourceCard}>
                                 <iframe
+                                  key={`${activeChapter}-${url}`}
                                   src={getYoutubeEmbed(url)}
-                                  title={`Video ${index + 1}`}
+                                  title={`Video ${activeChapter + 1}-${index + 1}`}
                                   style={iframe}
                                   allowFullScreen
                                 />
                               </div>
                             ) : (
                               <a
-                                key={url}
+                                key={`${activeChapter}-${url}-${index}`}
                                 href={url}
                                 target="_blank"
                                 rel="noreferrer"
                                 style={resourceLink}
                               >
-                                Resource {index + 1}
+                                {t.resource} {index + 1}
                               </a>
                             )
                           )}
                         </div>
                       ) : (
-                        <LockedBlock t={t} />
+                        <button
+                          type="button"
+                          onClick={() => setShowAuthPopup(true)}
+                          style={lockedButton}
+                        >
+                          {t.openExtra}
+                        </button>
                       )}
                     </div>
                   ) : null}
@@ -296,14 +317,32 @@ export default function CourseDetailsPage() {
           </section>
         ) : null}
 
-        <section style={{ ...section, marginTop: "22px", borderColor: "rgba(179,19,26,0.35)" }}>
-          <h2 style={sectionTitle}>{t.privateTitle}</h2>
-          <p style={text}>{t.privateText}</p>
+        {showAuthPopup ? (
+          <div style={modalOverlay}>
+            <div style={modal}>
+              <button
+                type="button"
+                onClick={() => setShowAuthPopup(false)}
+                style={modalClose}
+              >
+                ×
+              </button>
 
-          {!isLoggedIn ? (
-            <Link to="/login" style={redBtn}>{t.login}</Link>
-          ) : null}
-        </section>
+              <h3 style={modalTitle}>{t.privateTitle}</h3>
+              <p style={modalText}>{t.privateText}</p>
+
+              <div style={modalActions}>
+                <Link to="/login" style={redBtnModal}>
+                  {t.signIn}
+                </Link>
+
+                <Link to="/register" style={ghostBtn}>
+                  {t.register}
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -314,16 +353,6 @@ function InfoRow({ label, value }) {
     <div style={infoRow}>
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function LockedBlock({ t }) {
-  return (
-    <div style={locked}>
-      <h3 style={{ margin: "0 0 8px", color: "#FFFFFF" }}>{t.privateTitle}</h3>
-      <p style={text}>{t.privateText}</p>
-      <Link to="/login" style={redBtn}>{t.login}</Link>
     </div>
   );
 }
@@ -408,6 +437,13 @@ const sectionTitle = {
   fontWeight: 800,
 };
 
+const tagsWrap = {
+  display: "flex",
+  gap: "8px",
+  flexWrap: "wrap",
+  marginTop: "16px",
+};
+
 const badge = {
   display: "inline-flex",
   alignItems: "center",
@@ -427,6 +463,35 @@ const redBtn = {
   borderRadius: "999px",
   background: "#B3131A",
   color: "#FFFFFF",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 800,
+};
+
+const redBtnModal = {
+  minWidth: "130px",
+  height: "42px",
+  borderRadius: "999px",
+  background: "#B3131A",
+  color: "#FFFFFF",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 800,
+};
+
+const ghostBtn = {
+  minWidth: "150px",
+  height: "42px",
+  borderRadius: "999px",
+  border: "1px solid #2E5D8C",
+  color: "#2E5D8C",
+  background: "#FFFFFF",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -511,9 +576,72 @@ const resourceLink = {
   fontSize: "13px",
 };
 
-const locked = {
-  borderRadius: "18px",
-  background: "rgba(179,19,26,0.12)",
+const lockedButton = {
+  width: "100%",
+  minHeight: "54px",
+  borderRadius: "16px",
   border: "1px solid rgba(179,19,26,0.35)",
-  padding: "18px",
+  background: "rgba(179,19,26,0.12)",
+  color: "#FFFFFF",
+  padding: "0 16px",
+  textAlign: "left",
+  fontSize: "13px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const modalOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.55)",
+  zIndex: 1000,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+};
+
+const modal = {
+  width: "100%",
+  maxWidth: "430px",
+  borderRadius: "24px",
+  background: "#FFFFFF",
+  color: "#101828",
+  padding: "26px",
+  position: "relative",
+  boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
+};
+
+const modalClose = {
+  position: "absolute",
+  top: "12px",
+  right: "14px",
+  width: "30px",
+  height: "30px",
+  borderRadius: "50%",
+  border: "none",
+  background: "#EEF3F8",
+  color: "#101828",
+  fontSize: "20px",
+  cursor: "pointer",
+};
+
+const modalTitle = {
+  margin: "0 0 10px",
+  color: "#101828",
+  fontSize: "22px",
+  fontWeight: 800,
+};
+
+const modalText = {
+  margin: 0,
+  color: "#344054",
+  fontSize: "14px",
+  lineHeight: 1.6,
+};
+
+const modalActions = {
+  display: "flex",
+  gap: "10px",
+  marginTop: "20px",
 };
