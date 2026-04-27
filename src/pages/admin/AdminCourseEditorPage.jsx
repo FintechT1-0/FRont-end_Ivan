@@ -67,6 +67,8 @@ export default function AdminCourseEditorPage() {
     chapters: [emptyChapter()],
   });
 
+  const isInternal = form.course_type === "internal";
+
   const t = useMemo(() => {
     return {
       title: isEdit
@@ -112,46 +114,32 @@ export default function AdminCourseEditorPage() {
           ? "Extra ресурси / YouTube / матеріали"
           : "Extra resources / YouTube / materials",
       extraPlaceholder:
-        lang === "ua"
-          ? "Встав URL ресурсу"
-          : "Paste resource URL",
+        lang === "ua" ? "Встав URL ресурсу" : "Paste resource URL",
       addExtra:
-        lang === "ua"
-          ? "+ Додати extra посилання"
-          : "+ Add extra link",
+        lang === "ua" ? "+ Додати extra посилання" : "+ Add extra link",
       removeExtra:
-        lang === "ua"
-          ? "Видалити посилання"
-          : "Remove link",
+        lang === "ua" ? "Видалити посилання" : "Remove link",
 
       addChapter: lang === "ua" ? "+ Додати главу" : "+ Add chapter",
       remove: lang === "ua" ? "Видалити" : "Remove",
 
-      externalInfo:
-        lang === "ua"
-          ? "Для зовнішнього курсу додай посилання на чужий ресурс у полі «Зовнішнє посилання». У вкладці «Контент і extra» можна додати extra посилання, YouTube або матеріали."
-          : "For an external course, add the third-party course link in External link. In Content and extra, you can add extra links, YouTube or materials.",
       internalInfo:
         lang === "ua"
           ? "Для внутрішнього курсу додай глави, великий текст і extra посилання. Extra зберігається як embeddings у главі."
           : "For an internal course, add chapters, large text and extra links. Extra is stored as embeddings inside the chapter.",
 
       required:
-        lang === "ua"
-          ? "Заповни обов’язкові поля."
-          : "Fill required fields.",
+        lang === "ua" ? "Заповни обов’язкові поля." : "Fill required fields.",
       needLink:
         lang === "ua"
           ? "Для зовнішнього курсу потрібне посилання."
           : "External course needs a link.",
       needChapter:
         lang === "ua"
-          ? "Додай хоча б одну заповнену главу або extra блок."
-          : "Add at least one completed chapter or extra block.",
+          ? "Додай хоча б одну заповнену главу."
+          : "Add at least one completed chapter.",
       fail:
-        lang === "ua"
-          ? "Не вдалося зберегти курс."
-          : "Failed to save course.",
+        lang === "ua" ? "Не вдалося зберегти курс." : "Failed to save course.",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
     };
   }, [lang, isEdit]);
@@ -189,12 +177,17 @@ export default function AdminCourseEditorPage() {
                   description_ua: chapter.description_ua || "",
                   description_en: chapter.description_en || "",
                   embeddings:
-                    Array.isArray(chapter.embeddings) && chapter.embeddings.length
+                    Array.isArray(chapter.embeddings) &&
+                    chapter.embeddings.length
                       ? chapter.embeddings
                       : [""],
                 }))
               : [emptyChapter()],
         });
+
+        if ((data.course_type || "external") === "external") {
+          setActiveTab("details");
+        }
       } catch (error) {
         alert(getBackendError(error, "Failed to load course"));
         navigate("/admin/courses");
@@ -212,6 +205,17 @@ export default function AdminCourseEditorPage() {
 
   function setField(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function setCourseType(value) {
+    setForm((prev) => ({
+      ...prev,
+      course_type: value,
+    }));
+
+    if (value === "external") {
+      setActiveTab("details");
+    }
   }
 
   function setChapter(index, name, value) {
@@ -287,12 +291,10 @@ export default function AdminCourseEditorPage() {
   function cleanChapters() {
     return form.chapters
       .map((chapter) => ({
-        title_ua: chapter.title_ua.trim() || form.title_ua.trim(),
-        title_en: chapter.title_en.trim() || form.title_en.trim(),
-        description_ua:
-          chapter.description_ua.trim() || form.description_ua.trim(),
-        description_en:
-          chapter.description_en.trim() || form.description_en.trim(),
+        title_ua: chapter.title_ua.trim(),
+        title_en: chapter.title_en.trim(),
+        description_ua: chapter.description_ua.trim(),
+        description_en: chapter.description_en.trim(),
         embeddings: normalizeEmbeddings(chapter.embeddings),
       }))
       .filter(
@@ -321,7 +323,7 @@ export default function AdminCourseEditorPage() {
       return t.needLink;
     }
 
-    if (cleanChapters().length === 0) {
+    if (form.course_type === "internal" && cleanChapters().length === 0) {
       return t.needChapter;
     }
 
@@ -350,7 +352,7 @@ export default function AdminCourseEditorPage() {
       image: form.image || null,
       speaker: form.speaker || null,
       isPublished: Boolean(form.isPublished),
-      chapters: cleanChapters(),
+      chapters: form.course_type === "internal" ? cleanChapters() : [],
     };
 
     if (!isEdit) {
@@ -402,13 +404,15 @@ export default function AdminCourseEditorPage() {
             {t.details}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("content")}
-            style={tab(activeTab === "content")}
-          >
-            {t.content}
-          </button>
+          {isInternal ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab("content")}
+              style={tab(activeTab === "content")}
+            >
+              {t.content}
+            </button>
+          ) : null}
         </div>
 
         {activeTab === "details" ? (
@@ -419,7 +423,7 @@ export default function AdminCourseEditorPage() {
                 <select
                   value={form.course_type}
                   disabled={isEdit}
-                  onChange={(e) => setField("course_type", e.target.value)}
+                  onChange={(e) => setCourseType(e.target.value)}
                   style={input}
                 >
                   <option value="external">{t.external}</option>
@@ -427,72 +431,17 @@ export default function AdminCourseEditorPage() {
                 </select>
               </div>
 
-              <Field
-                label={t.category}
-                value={form.category}
-                onChange={(v) => setField("category", v)}
-              />
-
-              <Field
-                label={t.titleUa}
-                value={form.title_ua}
-                onChange={(v) => setField("title_ua", v)}
-              />
-
-              <Field
-                label={t.titleEn}
-                value={form.title_en}
-                onChange={(v) => setField("title_en", v)}
-              />
-
-              <TextArea
-                label={t.descUa}
-                value={form.description_ua}
-                onChange={(v) => setField("description_ua", v)}
-              />
-
-              <TextArea
-                label={t.descEn}
-                value={form.description_en}
-                onChange={(v) => setField("description_en", v)}
-              />
-
-              <Field
-                label={t.tags}
-                value={form.tags}
-                onChange={(v) => setField("tags", v)}
-              />
-
-              <Field
-                label={t.duration}
-                value={form.durationText}
-                onChange={(v) => setField("durationText", v)}
-              />
-
-              <Field
-                label={t.price}
-                type="number"
-                value={form.price}
-                onChange={(v) => setField("price", v)}
-              />
-
-              <Field
-                label={t.speaker}
-                value={form.speaker}
-                onChange={(v) => setField("speaker", v)}
-              />
-
-              <Field
-                label={t.image}
-                value={form.image}
-                onChange={(v) => setField("image", v)}
-              />
-
-              <Field
-                label={t.link}
-                value={form.link}
-                onChange={(v) => setField("link", v)}
-              />
+              <Field label={t.category} value={form.category} onChange={(v) => setField("category", v)} />
+              <Field label={t.titleUa} value={form.title_ua} onChange={(v) => setField("title_ua", v)} />
+              <Field label={t.titleEn} value={form.title_en} onChange={(v) => setField("title_en", v)} />
+              <TextArea label={t.descUa} value={form.description_ua} onChange={(v) => setField("description_ua", v)} />
+              <TextArea label={t.descEn} value={form.description_en} onChange={(v) => setField("description_en", v)} />
+              <Field label={t.tags} value={form.tags} onChange={(v) => setField("tags", v)} />
+              <Field label={t.duration} value={form.durationText} onChange={(v) => setField("durationText", v)} />
+              <Field label={t.price} type="number" value={form.price} onChange={(v) => setField("price", v)} />
+              <Field label={t.speaker} value={form.speaker} onChange={(v) => setField("speaker", v)} />
+              <Field label={t.image} value={form.image} onChange={(v) => setField("image", v)} />
+              <Field label={t.link} value={form.link} onChange={(v) => setField("link", v)} />
             </div>
 
             <label style={checkRow}>
@@ -506,9 +455,7 @@ export default function AdminCourseEditorPage() {
           </>
         ) : (
           <>
-            <div style={note}>
-              {form.course_type === "external" ? t.externalInfo : t.internalInfo}
-            </div>
+            <div style={note}>{t.internalInfo}</div>
 
             <div style={{ display: "grid", gap: 14 }}>
               {form.chapters.map((chapter, chapterIndex) => (
@@ -531,33 +478,25 @@ export default function AdminCourseEditorPage() {
                     <Field
                       label={t.chapterTitleUa}
                       value={chapter.title_ua}
-                      onChange={(v) =>
-                        setChapter(chapterIndex, "title_ua", v)
-                      }
+                      onChange={(v) => setChapter(chapterIndex, "title_ua", v)}
                     />
 
                     <Field
                       label={t.chapterTitleEn}
                       value={chapter.title_en}
-                      onChange={(v) =>
-                        setChapter(chapterIndex, "title_en", v)
-                      }
+                      onChange={(v) => setChapter(chapterIndex, "title_en", v)}
                     />
 
                     <TextArea
                       label={t.chapterTextUa}
                       value={chapter.description_ua}
-                      onChange={(v) =>
-                        setChapter(chapterIndex, "description_ua", v)
-                      }
+                      onChange={(v) => setChapter(chapterIndex, "description_ua", v)}
                     />
 
                     <TextArea
                       label={t.chapterTextEn}
                       value={chapter.description_en}
-                      onChange={(v) =>
-                        setChapter(chapterIndex, "description_en", v)
-                      }
+                      onChange={(v) => setChapter(chapterIndex, "description_en", v)}
                     />
 
                     <div style={{ gridColumn: "1 / -1" }}>
