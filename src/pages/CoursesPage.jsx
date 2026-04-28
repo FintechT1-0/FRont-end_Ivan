@@ -2,11 +2,28 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCourses } from "../api/courses";
 import SafeImage from "../components/SafeImage";
-import DesktopOnly from "../components/DesktopOnly";
 import { useLang } from "../context/LanguageContext";
 
 const PAGE_BG = "#082947";
 const RED = "#B3131A";
+
+function useScreen() {
+  const [width, setWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    function onResize() {
+      setWidth(window.innerWidth);
+    }
+
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return {
+    isMobile: width < 640,
+    isTablet: width >= 640 && width < 1024,
+  };
+}
 
 function normalizeCourses(payload) {
   if (Array.isArray(payload)) return payload;
@@ -46,10 +63,12 @@ function getUniqueTags(items) {
 
 export default function CoursesPage() {
   const { lang } = useLang();
+  const { isMobile, isTablet } = useScreen();
 
   const [activeType, setActiveType] = useState("external");
   const [allCourses, setAllCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [filters, setFilters] = useState({
     title: "",
@@ -67,6 +86,8 @@ export default function CoursesPage() {
           : "DISCOVER FINTECH COURSES",
       external: lang === "ua" ? "Зовнішні" : "External",
       internal: lang === "ua" ? "Внутрішні" : "Internal",
+      filters: lang === "ua" ? "Фільтри" : "Filters",
+      close: lang === "ua" ? "Закрити" : "Close",
       search: lang === "ua" ? "Пошук за назвою" : "Search by title",
       allCategories: lang === "ua" ? "Усі категорії" : "All categories",
       allTags: lang === "ua" ? "Усі теги" : "All tags",
@@ -81,6 +102,7 @@ export default function CoursesPage() {
       upTo: lang === "ua" ? "до" : "up to",
       hours: lang === "ua" ? "год" : "h",
       reset: lang === "ua" ? "Скинути" : "Reset",
+      apply: lang === "ua" ? "Показати курси" : "Show courses",
       view: lang === "ua" ? "Деталі" : "Details",
       loading: lang === "ua" ? "Завантаження..." : "Loading...",
       empty: lang === "ua" ? "Курсів не знайдено" : "No courses found",
@@ -104,8 +126,7 @@ export default function CoursesPage() {
         isPublished: true,
       });
 
-      const normalized = normalizeCourses(data);
-      setAllCourses(normalized);
+      setAllCourses(normalizeCourses(data));
 
       setFilters((prev) => ({
         ...prev,
@@ -177,179 +198,280 @@ export default function CoursesPage() {
     });
   }
 
+  const pageStyle = {
+    ...page,
+    padding: isMobile ? "24px 14px 48px" : "34px 18px 54px",
+  };
+
+  const titleStyle = {
+    ...title,
+    fontSize: isMobile ? "24px" : isTablet ? "30px" : "34px",
+    lineHeight: 1.15,
+  };
+
+  const tabsStyle = {
+    ...tabs,
+    flexDirection: isMobile ? "column" : "row",
+  };
+
+  const filtersPanelStyle = {
+    ...filtersPanel,
+    gridTemplateColumns: isTablet ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
+  };
+
+  const gridStyle = {
+    ...grid,
+    gridTemplateColumns: isTablet
+      ? "repeat(2, minmax(0, 1fr))"
+      : "repeat(3, minmax(0, 1fr))",
+  };
+
   return (
-    <DesktopOnly>
-      <div style={page}>
-        <div style={wrap}>
-          <h1 style={title}>{t.title}</h1>
+    <div style={pageStyle}>
+      <div style={wrap}>
+        <h1 style={titleStyle}>{t.title}</h1>
 
-          <div style={tabs}>
-            <button
-              type="button"
-              onClick={() => setActiveType("external")}
-              style={tab(activeType === "external")}
-            >
-              {t.external}
-            </button>
+        <div style={tabsStyle}>
+          <button
+            type="button"
+            onClick={() => setActiveType("external")}
+            style={tab(activeType === "external", isMobile)}
+          >
+            {t.external}
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveType("internal")}
-              style={tab(activeType === "internal")}
-            >
-              {t.internal}
-            </button>
+          <button
+            type="button"
+            onClick={() => setActiveType("internal")}
+            style={tab(activeType === "internal", isMobile)}
+          >
+            {t.internal}
+          </button>
+        </div>
+
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            style={mobileFilterButton}
+          >
+            {t.filters}
+          </button>
+        ) : (
+          <FiltersContent
+            t={t}
+            filters={filters}
+            setFilter={setFilter}
+            resetFilters={resetFilters}
+            categories={categories}
+            tags={tags}
+            maxDuration={maxDuration}
+            panelStyle={filtersPanelStyle}
+          />
+        )}
+
+        {loading ? (
+          <div style={message}>{t.loading}</div>
+        ) : filteredCourses.length === 0 ? (
+          <div style={message}>{t.empty}</div>
+        ) : (
+          <div style={isMobile ? mobileCarousel : gridStyle}>
+            {filteredCourses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                lang={lang}
+                t={t}
+                isMobile={isMobile}
+              />
+            ))}
           </div>
+        )}
 
-          <div style={filtersPanel}>
-            <input
-              placeholder={t.search}
-              value={filters.title}
-              onChange={(e) => setFilter("title", e.target.value)}
-              style={input}
-            />
+        {isMobile && filtersOpen ? (
+          <div style={sheetOverlay}>
+            <div style={sheet}>
+              <div style={sheetTop}>
+                <strong>{t.filters}</strong>
 
-            <select
-              value={filters.category}
-              onChange={(e) => setFilter("category", e.target.value)}
-              style={input}
-            >
-              <option value="">{t.allCategories}</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filters.tag}
-              onChange={(e) => setFilter("tag", e.target.value)}
-              style={input}
-            >
-              <option value="">{t.allTags}</option>
-              {tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filters.price}
-              onChange={(e) => setFilter("price", e.target.value)}
-              style={input}
-            >
-              <option value="">{t.allPrices}</option>
-              <option value="free">{t.freeOnly}</option>
-              <option value="paid">{t.paidOnly}</option>
-              <option value="low">{t.lowPrice}</option>
-              <option value="middle">{t.middlePrice}</option>
-              <option value="high">{t.highPrice}</option>
-            </select>
-
-            <div style={sliderBox}>
-              <div style={sliderTop}>
-                <span>{t.duration}</span>
-                <span>
-                  {Number(filters.durationMax) === 0
-                    ? t.allDurations
-                    : `${t.upTo} ${filters.durationMax} ${t.hours}`}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(false)}
+                  style={sheetClose}
+                >
+                  ×
+                </button>
               </div>
 
-              <input
-                type="range"
-                min="0"
-                max={maxDuration || 1}
-                value={filters.durationMax}
-                onChange={(e) =>
-                  setFilter("durationMax", Number(e.target.value))
-                }
-                style={range}
+              <FiltersContent
+                t={t}
+                filters={filters}
+                setFilter={setFilter}
+                resetFilters={resetFilters}
+                categories={categories}
+                tags={tags}
+                maxDuration={maxDuration}
+                panelStyle={mobileFiltersPanel}
               />
-            </div>
 
-            <button type="button" onClick={resetFilters} style={resetBtn}>
-              {t.reset}
-            </button>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                style={applyBtn}
+              >
+                {t.apply}
+              </button>
+            </div>
           </div>
-
-          {loading ? (
-            <div style={message}>{t.loading}</div>
-          ) : filteredCourses.length === 0 ? (
-            <div style={message}>{t.empty}</div>
-          ) : (
-            <div style={grid}>
-              {filteredCourses.map((course) => (
-                <article key={course.id} style={card}>
-                  <div style={imageBox}>
-                    {course.image ? (
-                      <SafeImage
-                        src={course.image}
-                        alt={getTitle(course, lang)}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    ) : (
-                      <div style={imageFallback}>{t.noImage}</div>
-                    )}
-                  </div>
-
-                  <div style={cardBody}>
-                    <div style={courseType}>
-                      {course.course_type === "internal"
-                        ? t.internal
-                        : t.external}
-                    </div>
-
-                    <h2 style={courseTitle}>{getTitle(course, lang)}</h2>
-
-                    <p style={description}>{getDescription(course, lang)}</p>
-
-                    <div style={meta}>
-                      <span>{course.category || "-"}</span>
-                      <span>{course.durationText || "-"}</span>
-                    </div>
-
-                    <div style={meta}>
-                      <span>
-                        {Number(course.price) > 0
-                          ? `${course.price}$`
-                          : t.free}
-                      </span>
-                      <span>
-                        {Array.isArray(course.tags)
-                          ? course.tags.slice(0, 2).join(", ")
-                          : ""}
-                      </span>
-                    </div>
-
-                    <Link to={`/courses/${course.id}`} style={button}>
-                      {t.view}
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
+        ) : null}
       </div>
-    </DesktopOnly>
+    </div>
+  );
+}
+
+function FiltersContent({
+  t,
+  filters,
+  setFilter,
+  resetFilters,
+  categories,
+  tags,
+  maxDuration,
+  panelStyle,
+}) {
+  return (
+    <div style={panelStyle}>
+      <input
+        placeholder={t.search}
+        value={filters.title}
+        onChange={(e) => setFilter("title", e.target.value)}
+        style={input}
+      />
+
+      <select
+        value={filters.category}
+        onChange={(e) => setFilter("category", e.target.value)}
+        style={input}
+      >
+        <option value="">{t.allCategories}</option>
+        {categories.map((category) => (
+          <option key={category} value={category}>
+            {category}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filters.tag}
+        onChange={(e) => setFilter("tag", e.target.value)}
+        style={input}
+      >
+        <option value="">{t.allTags}</option>
+        {tags.map((tag) => (
+          <option key={tag} value={tag}>
+            {tag}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filters.price}
+        onChange={(e) => setFilter("price", e.target.value)}
+        style={input}
+      >
+        <option value="">{t.allPrices}</option>
+        <option value="free">{t.freeOnly}</option>
+        <option value="paid">{t.paidOnly}</option>
+        <option value="low">{t.lowPrice}</option>
+        <option value="middle">{t.middlePrice}</option>
+        <option value="high">{t.highPrice}</option>
+      </select>
+
+      <div style={sliderBox}>
+        <div style={sliderTop}>
+          <span>{t.duration}</span>
+          <span>
+            {Number(filters.durationMax) === 0
+              ? t.allDurations
+              : `${t.upTo} ${filters.durationMax} ${t.hours}`}
+          </span>
+        </div>
+
+        <input
+          type="range"
+          min="0"
+          max={maxDuration || 1}
+          value={filters.durationMax}
+          onChange={(e) => setFilter("durationMax", Number(e.target.value))}
+          style={range}
+        />
+      </div>
+
+      <button type="button" onClick={resetFilters} style={resetBtn}>
+        {t.reset}
+      </button>
+    </div>
+  );
+}
+
+function CourseCard({ course, lang, t, isMobile }) {
+  return (
+    <article style={{ ...card, minWidth: isMobile ? "82vw" : "auto" }}>
+      <div style={imageBox}>
+        {course.image ? (
+          <SafeImage
+            src={course.image}
+            alt={getTitle(course, lang)}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : (
+          <div style={imageFallback}>{t.noImage}</div>
+        )}
+      </div>
+
+      <div style={cardBody}>
+        <div style={courseType}>
+          {course.course_type === "internal" ? t.internal : t.external}
+        </div>
+
+        <h2 style={courseTitle}>{getTitle(course, lang)}</h2>
+
+        <p style={description}>{getDescription(course, lang)}</p>
+
+        <div style={meta}>
+          <span>{course.category || "-"}</span>
+          <span>{course.durationText || "-"}</span>
+        </div>
+
+        <div style={meta}>
+          <span>{Number(course.price) > 0 ? `${course.price}$` : t.free}</span>
+          <span>
+            {Array.isArray(course.tags)
+              ? course.tags.slice(0, 2).join(", ")
+              : ""}
+          </span>
+        </div>
+
+        <Link to={`/courses/${course.id}`} style={button}>
+          {t.view}
+        </Link>
+      </div>
+    </article>
   );
 }
 
 const page = {
   background: PAGE_BG,
   minHeight: "100vh",
-  padding: "34px 18px 54px",
 };
 
 const wrap = {
+  width: "100%",
   maxWidth: "1180px",
   margin: "0 auto",
 };
@@ -357,7 +479,6 @@ const wrap = {
 const title = {
   color: "#FFFFFF",
   textAlign: "center",
-  fontSize: "34px",
   fontWeight: 800,
   margin: "0 0 22px",
 };
@@ -366,12 +487,11 @@ const tabs = {
   display: "flex",
   justifyContent: "center",
   gap: "12px",
-  marginBottom: "22px",
+  marginBottom: "18px",
 };
 
 const filtersPanel = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
   gap: "12px",
   padding: "18px",
   borderRadius: "24px",
@@ -382,9 +502,15 @@ const filtersPanel = {
   boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
 };
 
+const mobileFiltersPanel = {
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gap: "12px",
+};
+
 const input = {
   width: "100%",
-  height: "42px",
+  height: "44px",
   borderRadius: "999px",
   border: "1px solid rgba(255,255,255,0.14)",
   outline: "none",
@@ -395,7 +521,7 @@ const input = {
 };
 
 const sliderBox = {
-  height: "42px",
+  height: "44px",
   borderRadius: "999px",
   background: "#FFFFFF",
   padding: "6px 14px",
@@ -416,7 +542,7 @@ const range = {
 };
 
 const resetBtn = {
-  height: "42px",
+  height: "44px",
   borderRadius: "999px",
   border: "1px solid rgba(255,255,255,0.22)",
   background: "transparent",
@@ -425,6 +551,18 @@ const resetBtn = {
   fontSize: "13px",
   fontWeight: 800,
   cursor: "pointer",
+};
+
+const mobileFilterButton = {
+  width: "100%",
+  height: "44px",
+  borderRadius: "999px",
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.08)",
+  color: "#FFFFFF",
+  fontSize: "14px",
+  fontWeight: 800,
+  marginBottom: "22px",
 };
 
 const message = {
@@ -437,9 +575,16 @@ const message = {
 
 const grid = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   gap: "22px",
   alignItems: "stretch",
+};
+
+const mobileCarousel = {
+  display: "flex",
+  gap: "16px",
+  overflowX: "auto",
+  padding: "4px 2px 18px",
+  scrollSnapType: "x mandatory",
 };
 
 const card = {
@@ -452,6 +597,7 @@ const card = {
   boxShadow: "0 18px 40px rgba(0,0,0,0.24)",
   display: "flex",
   flexDirection: "column",
+  scrollSnapAlign: "start",
 };
 
 const imageBox = {
@@ -534,7 +680,7 @@ const meta = {
 
 const button = {
   marginTop: "auto",
-  height: "38px",
+  height: "42px",
   borderRadius: "999px",
   background: RED,
   color: "#FFFFFF",
@@ -547,10 +693,60 @@ const button = {
   boxShadow: "0 10px 18px rgba(179,19,26,0.22)",
 };
 
-function tab(active) {
+const sheetOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.52)",
+  zIndex: 1000,
+  display: "flex",
+  alignItems: "flex-end",
+};
+
+const sheet = {
+  width: "100%",
+  background: "#082947",
+  borderRadius: "26px 26px 0 0",
+  padding: "20px 16px 22px",
+  border: "1px solid rgba(255,255,255,0.12)",
+  boxShadow: "0 -20px 40px rgba(0,0,0,0.35)",
+};
+
+const sheetTop = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  color: "#FFFFFF",
+  fontSize: "18px",
+  marginBottom: "16px",
+};
+
+const sheetClose = {
+  width: "34px",
+  height: "34px",
+  borderRadius: "50%",
+  border: "none",
+  background: "rgba(255,255,255,0.12)",
+  color: "#FFFFFF",
+  fontSize: "22px",
+};
+
+const applyBtn = {
+  width: "100%",
+  height: "44px",
+  borderRadius: "999px",
+  border: "none",
+  background: RED,
+  color: "#FFFFFF",
+  fontSize: "14px",
+  fontWeight: 800,
+  marginTop: "14px",
+};
+
+function tab(active, isMobile) {
   return {
-    minWidth: "130px",
-    height: "38px",
+    width: isMobile ? "100%" : "auto",
+    minWidth: isMobile ? "100%" : "130px",
+    height: "40px",
     borderRadius: "999px",
     background: active ? RED : "transparent",
     color: "#FFFFFF",

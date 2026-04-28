@@ -28,8 +28,8 @@ export default function Header() {
   const nav = {
     main: { en: "Main", ua: "Головна" },
     courses: { en: "Courses", ua: "Курси" },
-    insights: { en: "Insights", ua: "Insights" },
-    partners: { en: "Partners", ua: "Partners" },
+    insights: { en: "Insights", ua: "Інсайди" },
+    partners: { en: "Partners", ua: "Партнери" },
     signIn: { en: "Sign In", ua: "Увійти" },
     cabinet: { en: "Cabinet", ua: "Кабінет" },
   };
