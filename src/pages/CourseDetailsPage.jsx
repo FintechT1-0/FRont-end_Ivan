@@ -5,6 +5,8 @@ import SafeImage from "../components/SafeImage";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LanguageContext";
 
+const RED = "#B3131A";
+
 const glass = {
   background:
     "linear-gradient(180deg, rgba(19,54,90,0.82) 0%, rgba(10,37,67,0.94) 100%)",
@@ -14,6 +16,24 @@ const glass = {
   backdropFilter: "blur(14px)",
   WebkitBackdropFilter: "blur(14px)",
 };
+
+function useScreen() {
+  const [width, setWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    function onResize() {
+      setWidth(window.innerWidth);
+    }
+
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return {
+    isMobile: width < 640,
+    isTablet: width >= 640 && width < 1024,
+  };
+}
 
 function getTitle(course, lang) {
   return lang === "ua"
@@ -65,6 +85,7 @@ export default function CourseDetailsPage() {
   const { id } = useParams();
   const { lang } = useLang();
   const { user } = useAuth();
+  const { isMobile, isTablet } = useScreen();
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -98,9 +119,7 @@ export default function CourseDetailsPage() {
       chapters: lang === "ua" ? "Глави курсу" : "Course chapters",
       resources: lang === "ua" ? "Extra матеріали" : "Extra materials",
       privateTitle:
-        lang === "ua"
-          ? "Увійди або зареєструйся"
-          : "Sign in or register",
+        lang === "ua" ? "Увійди або зареєструйся" : "Sign in or register",
       privateText:
         lang === "ua"
           ? "Extra матеріали доступні тільки зареєстрованим користувачам."
@@ -108,9 +127,7 @@ export default function CourseDetailsPage() {
       signIn: lang === "ua" ? "Увійти" : "Sign in",
       register: lang === "ua" ? "Зареєструватися" : "Register",
       openExtra:
-        lang === "ua"
-          ? "Відкрити extra матеріали"
-          : "Open extra materials",
+        lang === "ua" ? "Відкрити extra матеріали" : "Open extra materials",
       noChapters:
         lang === "ua"
           ? "Глави для цього курсу ще не додані."
@@ -162,37 +179,75 @@ export default function CourseDetailsPage() {
     );
   }
 
+  const heroStyle = {
+    ...hero,
+    gridTemplateColumns: isMobile || isTablet ? "1fr" : "420px 1fr",
+    padding: isMobile ? "16px" : "22px",
+    gap: isMobile ? "18px" : "28px",
+  };
+
+  const imageBoxStyle = {
+    ...imageBox,
+    height: isMobile ? "220px" : isTablet ? "320px" : "280px",
+  };
+
+  const titleStyle = {
+    ...title,
+    fontSize: isMobile ? "28px" : isTablet ? "34px" : "40px",
+  };
+
+  const twoColumnsStyle = {
+    ...twoColumns,
+    gridTemplateColumns: isMobile || isTablet ? "1fr" : "1.7fr 0.9fr",
+  };
+
+  const resourcesGridStyle = {
+    ...resourcesGrid,
+    gridTemplateColumns: isMobile
+      ? "1fr"
+      : isTablet
+      ? "repeat(2, 1fr)"
+      : "repeat(3, 1fr)",
+  };
+
   return (
     <div style={page}>
-      <div style={{ maxWidth: "1180px", margin: "0 auto" }}>
+      <div style={wrap}>
         <div style={{ marginBottom: "18px" }}>
           <Link to="/courses" style={backLink}>
             ← {t.back}
           </Link>
         </div>
 
-        <section style={hero}>
-          <div style={imageBox}>
+        <section style={heroStyle}>
+          <div style={imageBoxStyle}>
             {course.image ? (
               <SafeImage
                 src={course.image}
                 alt={getTitle(course, lang)}
-                className="w-full h-full object-cover"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
               />
             ) : null}
           </div>
 
           <div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <div style={tagsWrap}>
               <span style={badge}>{isInternal ? t.internal : t.external}</span>
-              {course.category ? <span style={badge}>{course.category}</span> : null}
+              {course.category ? (
+                <span style={badge}>{course.category}</span>
+              ) : null}
             </div>
 
-            <h1 style={title}>{getTitle(course, lang)}</h1>
+            <h1 style={titleStyle}>{getTitle(course, lang)}</h1>
             <p style={text}>{getDescription(course, lang)}</p>
 
             <div style={meta}>
-              <span>{course.durationText}</span>
+              <span>{course.durationText || "-"}</span>
               <span>
                 {Number(course.price) > 0 ? `${course.price} $` : t.free}
               </span>
@@ -200,14 +255,19 @@ export default function CourseDetailsPage() {
             </div>
 
             {isExternal && course.link ? (
-              <a href={course.link} target="_blank" rel="noreferrer" style={redBtn}>
+              <a
+                href={course.link}
+                target="_blank"
+                rel="noreferrer"
+                style={redBtn}
+              >
                 {t.open}
               </a>
             ) : null}
           </div>
         </section>
 
-        <div style={twoColumns}>
+        <div style={twoColumnsStyle}>
           <section style={section}>
             <h2 style={sectionTitle}>{t.about}</h2>
             <p style={text}>{getDescription(course, lang)}</p>
@@ -275,10 +335,13 @@ export default function CourseDetailsPage() {
                       <h3 style={chapterTitle}>{t.resources}</h3>
 
                       {isLoggedIn ? (
-                        <div style={resourcesGrid}>
+                        <div style={resourcesGridStyle}>
                           {activeChapterData.embeddings.map((url, index) =>
                             isYoutube(url) ? (
-                              <div key={`${activeChapter}-${url}-${index}`} style={resourceCard}>
+                              <div
+                                key={`${activeChapter}-${url}-${index}`}
+                                style={resourceCard}
+                              >
                                 <iframe
                                   key={`${activeChapter}-${url}`}
                                   src={getYoutubeEmbed(url)}
@@ -364,6 +427,12 @@ const page = {
   padding: "34px 16px 48px",
 };
 
+const wrap = {
+  width: "100%",
+  maxWidth: "1180px",
+  margin: "0 auto",
+};
+
 const center = {
   textAlign: "center",
   paddingTop: "80px",
@@ -379,15 +448,12 @@ const backLink = {
 const hero = {
   ...glass,
   borderRadius: "30px",
-  padding: "22px",
   display: "grid",
-  gridTemplateColumns: "420px 1fr",
-  gap: "28px",
   alignItems: "center",
 };
 
 const imageBox = {
-  height: "280px",
+  width: "100%",
   borderRadius: "24px",
   overflow: "hidden",
   background: "rgba(111,134,164,0.78)",
@@ -396,9 +462,9 @@ const imageBox = {
 const title = {
   margin: "18px 0 12px",
   color: "#FFFFFF",
-  fontSize: "40px",
   lineHeight: 1.15,
   fontWeight: 800,
+  wordBreak: "break-word",
 };
 
 const text = {
@@ -419,7 +485,6 @@ const meta = {
 
 const twoColumns = {
   display: "grid",
-  gridTemplateColumns: "1.7fr 0.9fr",
   gap: "22px",
   marginTop: "24px",
 };
@@ -461,37 +526,8 @@ const redBtn = {
   minWidth: "180px",
   height: "42px",
   borderRadius: "999px",
-  background: "#B3131A",
+  background: RED,
   color: "#FFFFFF",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  textDecoration: "none",
-  fontSize: "14px",
-  fontWeight: 800,
-};
-
-const redBtnModal = {
-  minWidth: "130px",
-  height: "42px",
-  borderRadius: "999px",
-  background: "#B3131A",
-  color: "#FFFFFF",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  textDecoration: "none",
-  fontSize: "14px",
-  fontWeight: 800,
-};
-
-const ghostBtn = {
-  minWidth: "150px",
-  height: "42px",
-  borderRadius: "999px",
-  border: "1px solid #2E5D8C",
-  color: "#2E5D8C",
-  background: "#FFFFFF",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -522,7 +558,7 @@ function chapterTab(active) {
     minHeight: "38px",
     borderRadius: "999px",
     border: "1px solid rgba(255,255,255,0.16)",
-    background: active ? "#B3131A" : "rgba(255,255,255,0.06)",
+    background: active ? RED : "rgba(255,255,255,0.06)",
     color: "#FFFFFF",
     padding: "0 14px",
     cursor: "pointer",
@@ -547,7 +583,6 @@ const chapterTitle = {
 
 const resourcesGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
   gap: "14px",
 };
 
@@ -559,7 +594,7 @@ const resourceCard = {
 
 const iframe = {
   width: "100%",
-  height: "150px",
+  height: "190px",
   border: "none",
   borderRadius: "14px",
 };
@@ -644,4 +679,34 @@ const modalActions = {
   display: "flex",
   gap: "10px",
   marginTop: "20px",
+  flexWrap: "wrap",
+};
+
+const redBtnModal = {
+  minWidth: "130px",
+  height: "42px",
+  borderRadius: "999px",
+  background: RED,
+  color: "#FFFFFF",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 800,
+};
+
+const ghostBtn = {
+  minWidth: "150px",
+  height: "42px",
+  borderRadius: "999px",
+  border: "1px solid #2E5D8C",
+  color: "#2E5D8C",
+  background: "#FFFFFF",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 800,
 };
