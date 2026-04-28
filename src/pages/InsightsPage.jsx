@@ -608,25 +608,53 @@ export default function InsightsPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-12 gap-3 items-start">
-                  <div className="col-span-5">
-                    {firstLarge ? (
-                      <MobileLeadCard item={firstLarge} lang={lang} compact />
-                    ) : null}
-                  </div>
+              <div className="mt-2">
 
-                  <div className="col-span-4">
-                    {secondMedium ? (
-                      <MobileLeadCard item={secondMedium} lang={lang} compact />
-                    ) : null}
-                  </div>
+  <h2 className="mb-3 text-[20px] font-semibold text-white">
 
-                  <div className="col-span-3 flex flex-col gap-3">
-                    {sideCards.map((item) => (
-                      <MobileMiniCard key={item.id} item={item} />
-                    ))}
-                  </div>
-                </div>
+    {lang === "ua" ? "Головні інсайди" : "Top insights"}
+
+  </h2>
+
+  <div
+
+    className="flex gap-4 overflow-x-auto pb-4"
+
+    style={{
+
+      scrollSnapType: "x mandatory",
+
+      WebkitOverflowScrolling: "touch",
+
+    }}
+
+  >
+
+    {[firstLarge, secondMedium, ...sideCards]
+
+      .filter(Boolean)
+
+      .map((item) => (
+
+        <div
+
+          key={item.id}
+
+          className="min-w-[82vw] max-w-[82vw]"
+
+          style={{ scrollSnapAlign: "start" }}
+
+        >
+
+          <MobileLeadCard item={item} lang={lang} />
+
+        </div>
+
+      ))}
+
+  </div>
+
+</div>
 
                 {restNews.length > 0 ? (
                   <h2 className="mt-6 mb-3 text-[20px] font-semibold text-white">
