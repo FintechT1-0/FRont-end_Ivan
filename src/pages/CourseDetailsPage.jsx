@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getCourseById } from "../api/courses";
-import SafeImage from "../components/SafeImage";
+import { getPublicCourseById } from "../api/courses";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LanguageContext";
+import SafeImage from "../components/SafeImage";
 
 const RED = "#B3131A";
 
@@ -142,7 +142,7 @@ export default function CourseDetailsPage() {
     async function load() {
       try {
         setLoading(true);
-        const data = await getCourseById(id);
+        const data = await getPublicCourseById(id);
         if (!active) return;
 
         setCourse(data);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCourses } from "../api/courses";
+import { getPublicCourses } from "../api/courses";
 import SafeImage from "../components/SafeImage";
 import { useLang } from "../context/LanguageContext";
 
@@ -119,11 +119,10 @@ export default function CoursesPage() {
     try {
       setLoading(true);
 
-      const data = await getCourses({
-        page: 1,
-        page_size: 100,
-        course_type: activeType,
-        isPublished: true,
+      const data = await getPublicCourses({
+      page: 1,
+      page_size: 100,
+      course_type: activeType,
       });
 
       setAllCourses(normalizeCourses(data));

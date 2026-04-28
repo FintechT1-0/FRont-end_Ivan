@@ -1,7 +1,13 @@
+import axios from "axios";
 import client from "./client";
+
+const publicClient = axios.create({
+  baseURL: client.defaults.baseURL,
+});
 
 function toNumberOrUndef(value) {
   if (value === "" || value === null || value === undefined) return undefined;
+
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
 }
@@ -70,7 +76,7 @@ function normalizeChapters(chapters) {
   return clean.length > 0 ? clean : null;
 }
 
-export async function getCourses(params = {}) {
+function buildCoursesQuery(params = {}, allowPublishedFilter = true) {
   const {
     tags,
     course_type,
@@ -102,7 +108,7 @@ export async function getCourses(params = {}) {
   if (typeof min === "number") query.price_min = min;
   if (typeof max === "number") query.price_max = max;
 
-  if (typeof isPublished === "boolean") {
+  if (allowPublishedFilter && typeof isPublished === "boolean") {
     query.isPublished = isPublished;
   }
 
@@ -114,7 +120,31 @@ export async function getCourses(params = {}) {
   query.page = Number(page) || 1;
   query.page_size = Number(page_size ?? pageSize) || 20;
 
-  const { data } = await client.get("/courses/", { params: query });
+  return query;
+}
+
+export async function getPublicCourses(params = {}) {
+  const query = buildCoursesQuery(params, false);
+
+  const { data } = await publicClient.get("/courses/", {
+    params: query,
+  });
+
+  return data;
+}
+
+export async function getPublicCourseById(id) {
+  const { data } = await publicClient.get(`/courses/${id}`);
+  return data;
+}
+
+export async function getCourses(params = {}) {
+  const query = buildCoursesQuery(params, true);
+
+  const { data } = await client.get("/courses/", {
+    params: query,
+  });
+
   return data;
 }
 
